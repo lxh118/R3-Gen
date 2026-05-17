@@ -1,0 +1,2 @@
+# One reward endpoint per line, for example:
+# http://node-b:6001

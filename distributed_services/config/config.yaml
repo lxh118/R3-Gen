@@ -1,0 +1,87 @@
+# ============================================================================
+# R3-Gen training and service configuration
+# ============================================================================
+# 
+# This file is intentionally public-safe: fill in local model paths before
+# launching services. Any environment variable that is already set will take
+# precedence over values loaded from this YAML by load_config.py.
+
+
+# 1. 服务配置
+# ============================================================================
+service:
+  # 服务端口配置起点
+  edit_server_base_port: 5001
+  reward_server_base_port: 6001
+  sam3_reward_server_base_port: 7001
+  
+  # Local model paths. Set these in this file or export EDIT_MODEL_PATH /
+  # OMNIVERIFIER_MODEL_PATH before running deploy_services.sh.
+  edit_model_path: /path/to/BAGEL-7B-MoT
+  omniverifier_model_path: /path/to/OmniVerifier-or-R3-Gen-reward-model
+
+  # SAM3 resources are only required when reward_type includes sam3.
+  sam3_bpe_path: /path/to/sam3/bpe_simple_vocab_16e6.txt.gz
+  sam3_ckpt_path: /path/to/sam3/sam3.pt
+  sam3_metadata_jsonl: ""  # SAM3 metadata JSONL 文件路径（可选）
+  
+  # 奖励服务类型：clip 或 omniverifier 或 sam3 或 mixed
+  reward_type: omniverifier
+  reward_type_per_gpu: ""
+
+  # 支持 sam3、clip、omniverifier 三种类型
+  # reward_type: mixed  # 奖励服务类型
+  # reward_type_per_gpu: "0:sam3,1:sam3,2:clip,3:clip"
+  
+  # GPU配置
+  gpus_per_node: 0  # 每个节点使用的GPU数量（0表示自动检测，>0表示使用指定数量）
+  # 每GPU实例数（统一配置，支持按GPU设置）
+  # 格式1（所有GPU相同）：4
+  instances_per_gpu: 4
+
+  # 格式2（按GPU指定）："0:8,1:8,2:4,3:4"
+  # instances_per_gpu: "0:4,1:4,2:4,3:16"  # 如果所有GPU相同，可以直接写数字，如 4
+  
+  # 图像编辑模型类型：bagel 或 qwen
+  image_edit_model_type: bagel # qwen
+  
+  # CLIP配置（可选）
+  clip_module_path: ""  # 自定义CLIP模块路径（可选，不设置则使用标准clip包）
+  clip_model_path: ""   # CLIP模型checkpoint路径（可选，.pt文件，用于加载自定义训练的模型）
+  
+  # API模式开关
+  use_api_mode: true
+  
+  # 多线程配置（控制Flask的threaded参数）
+  edit_server_threaded: false  # 密集型计算，默认关闭
+
+# ============================================================================
+# 2. API客户端配置
+# ============================================================================
+api_client:
+  # 健康检查配置
+  enable_health_check: true
+  health_check_failure_threshold: 5  # 连续失败多少次才标记为不健康（提高阈值可减少误判）
+  # API请求配置
+  request_timeout: 180  # 秒（增加超时时间适应BAGEL图像编辑）
+  max_retries: 3
+
+
+# ============================================================================
+# 3. 其他配置
+# ============================================================================
+other:
+  # HuggingFace endpoint. Leave empty to use the default HuggingFace endpoint.
+  hf_endpoint: ""
+  
+  # WandB配置（VERL框架使用，用于训练日志记录）
+  wandb:
+    api_key: ""
+    mode: offline  # offline: 本地记录，online: 云端同步
+  
+  # Python环境
+  pythonunbuffered: 1  # 禁用Python输出缓冲，确保日志实时输出
+  edit_conda_env: bagelfast   # 编辑服务 Conda 环境名称
+  reward_conda_env: sam3      # 奖励服务 Conda 环境名称（可设置为 sam3 或其他）
+  
+  project_root: "." # repo root when scripts are run from the project directory

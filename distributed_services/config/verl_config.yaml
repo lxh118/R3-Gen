@@ -1,0 +1,119 @@
+data:
+  train_files: ""  # 支持多个文件，用逗号分隔，例如: "path/to/file1.jsonl, path/to/file2.jsonl"
+  val_files: ""
+  prompt_key: prompt
+  answer_key: ground_truth
+  image_key: images
+  image_dir: null
+  max_prompt_length: 4096 # 3072
+  max_response_length: 2048
+  rollout_batch_size: 512  # equivalent to verl's data.train_batch_size
+  mini_rollout_batch_size: null  # equivalent to verl's data.gen_batch_size
+  val_batch_size: 1024
+  val_max_samples: null  # 限制验证集最大样本数，null表示使用全部数据。例如：200表示只使用200条验证数据
+  val_filter_overlong_prompts: false
+  format_prompt: examples/format_prompt/omniverifier_with_edit_optimized.jinja
+  override_chat_template: null
+  shuffle: true
+  seed: 1
+  min_pixels: 262144
+  max_pixels: 1183744 # 4194304 802816
+  internvl_fixed_resolution: null
+  train_filter_overlong_prompts: false
+  filter_overlong_prompts: true
+
+algorithm:
+  adv_estimator: grpo
+  disable_kl: true
+  use_kl_loss: true
+  kl_penalty: low_var_kl
+  kl_coef: 1.0e-2
+  online_filtering: false  # dapo filter groups
+  filter_key: overall
+  filter_low: 0.01
+  filter_high: 0.99
+
+worker:
+  actor:
+    global_batch_size: 128  # equivalent to verl's actor.ppo_mini_batch_size
+    micro_batch_size_per_device_for_update: 4  # 1  equivalent to verl's actor.ppo_micro_batch_size_per_gpu
+    micro_batch_size_per_device_for_experience: 4  # 2 equivalent to verl's rollout.log_prob_micro_batch_size_per_gpu
+    max_grad_norm: 1.0
+    padding_free: true
+    dynamic_batching: true
+    use_torch_compile: false  # InternVL vision tower 与 torch.compile 不兼容，会触发 "tensor data not allocated" RuntimeError
+    ulysses_size: 1
+    disable_tqdm: true  # disable frequent progress bars (mini-batches, update policy) to reduce log size
+    clip_ratio_low: 0.2
+    clip_ratio_high: 0.28
+    model:
+      model_path: Qwen/Qwen3-VL-8B-Thinking
+      enable_gradient_checkpointing: true
+      trust_remote_code: false
+      freeze_vision_tower: false
+    optim:
+      lr: 1.0e-6
+      weight_decay: 1.0e-2
+      strategy: adamw  # {adamw, adamw_bf16}
+      lr_warmup_ratio: 0.0
+    fsdp:
+      enable_full_shard: true
+      enable_cpu_offload: false
+      enable_rank0_init: true
+      torch_dtype: bf16  # 设置为 bfloat16，确保 Flash Attention 2 兼容性
+    offload:
+      offload_params: true  # true: more CPU memory; false: more GPU memory
+      offload_optimizer: true  # true: more CPU memory; false: more GPU memory
+
+  rollout:
+    n: 5 # 8 # 5
+    temperature: 1.0
+    top_p: 1.0
+    limit_images: 1
+    gpu_memory_utilization: 0.95 # 0.85
+    enforce_eager: false
+    enable_chunked_prefill: false
+    tensor_parallel_size: 1
+    disable_tqdm: true  # disable vLLM generation progress bars
+    val_override_config:
+      temperature: 0.01
+      top_p: 0.001
+      n: 1
+
+  ref:
+    fsdp:
+      enable_full_shard: true
+      enable_cpu_offload: true  # true: more CPU memory; false: more GPU memory
+      enable_rank0_init: true
+    offload:
+      offload_params: false
+
+  critic:
+    disable_tqdm: true  # disable frequent progress bars (mini-batches, update critic) to reduce log size
+    
+  reward:
+    reward_type: batch
+    reward_function: ./examples/reward_function/math.py:compute_score
+
+trainer:
+  total_epochs: 20
+  max_steps: null
+  project_name: easy_r1
+  experiment_name: qwen2_5_7b_math_grpo
+  logger: ["console", "wandb"]
+  nnodes: 1
+  n_gpus_per_node: 8
+  max_try_make_batch: 20  # -1 means no limit
+  val_freq: 5  # -1 to disable
+  val_before_train: true
+  val_only: false
+  val_generations_to_log: 0  # val输出到logger到数据量
+  disable_tqdm: false  # disable main training loop progress bar (keep for key info)
+  save_freq: 5  # -1 to disable
+  save_limit: 2  # -1 to disable
+  save_model_only: false
+  save_checkpoint_path: ""
+  load_checkpoint_path: ""
+  find_last_checkpoint: true
+  save_train_generations: true          # 启用保存训练 rollout 数据
+  train_generations_to_save: -1        # 每个 step 保存前 512 条（-1 则全部保存）

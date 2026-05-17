@@ -205,3 +205,25 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# R3-Gen local artifacts
+checkpoints/
+outputs/
+wandb/
+tmp/
+logs/
+distributed_services/logs/
+distributed_services/config/*_server_endpoints.local.txt
+examples/data/*.json
+examples/data/*.jsonl
+examples/data/images/*
+!examples/data/README.md
+!examples/data/images/.gitkeep
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.npy
+*.npz
+*.zip

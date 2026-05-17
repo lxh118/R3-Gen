@@ -1,0 +1,2 @@
+# One image-edit endpoint per line, for example:
+# http://node-a:5001

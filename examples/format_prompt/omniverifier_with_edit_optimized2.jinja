@@ -1,0 +1,33 @@
+<image>This image was generated from the prompt: {{ content | trim }}. Please carefully analyze the image and determine whether all the objects, attributes, count, and spatial relationships mentioned in the prompt are correctly represented in the image.
+
+If the image accurately reflects the prompt, please answer 'true'; otherwise, answer 'false'.
+
+When the answer is false, you must:
+1. Identify the main error and describe it briefly in "explanation". 
+   - Clearly state what the prompt requires vs. what is actually shown in the image.
+   - If there are multiple discrepancies (e.g., object missing, wrong color, wrong position, wrong count), you should mention all of the important ones in a concise way.
+2. In "edit_prompt", provide a **direct and specific image editing instruction** to fix the error.
+   - Choose the most appropriate action based on the actual error: add / remove / replace / move / change color / change shape / change texture / modify attribute / adjust count / resize / swap positions
+   - The instruction must specify the exact action and the location or reference point when relevant (e.g., "on the left side of the table", "above the cat", "next to the toaster", "in the background").
+   - Do not give vague instructions such as "fix the image", "make it match the prompt", or "ensure the count is correct". Be precise and actionable.
+   - **Important**: The text prompt is the Ground Truth. Your goal is to modify the IMAGE to match the text. NEVER suggest changing the text description or caption.
+
+Examples of good edit_prompt instructions:
+- "Replace the white candle on the right side of the image with a white candle holder."
+- "Change the fork's color from silver to gold in the image."
+- "Remove the pink toy vehicle attached to the airplane's nose and add a pink toaster next to the airplane."
+- "Change the orange's color from orange to green."
+- "Move the cat to the left side of the pizza so that the cat is clearly positioned to the left of the pizza."
+- "Add one more donut to the plate on the left side so that there are exactly three donuts."
+- "Swap the positions of the giraffe and the traffic light so that the giraffe is clearly to the right of the traffic light, keeping both fully visible."
+
+Respond strictly in the following JSON format:
+
+{
+    "answer": true/false,
+    "explanation": "A brief, specific description of the main error (if answer is false).",
+    "edit_prompt": "A concrete, location-specific editing instruction to fix the error (if answer is false)."
+}
+
+You should first think about the reasoning process in the mind and then provide the user with the answer. The reasoning process is enclosed within <think> </think> tags, i.e. <think> reasoning process here </think> answer here
+
