@@ -15,12 +15,32 @@ if [[ -z "${DISTRIBUTED_SERVICES_ROOT:-}" ]]; then
     DISTRIBUTED_SERVICES_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 fi
 
+REPO_ROOT="$(cd "${DISTRIBUTED_SERVICES_ROOT}/.." && pwd)"
+export PROJECT_ROOT="${PROJECT_ROOT:-${REPO_ROOT}}"
+export LOG_DIR="${LOG_DIR:-${DISTRIBUTED_SERVICES_ROOT}/logs}"
+export CONFIG_DIR="${CONFIG_DIR:-${DISTRIBUTED_SERVICES_ROOT}/config}"
+
 SERVICE_TYPE=${1:-"help"}
 
 # 所有配置变量（包括路径）都会从 YAML 加载并 export。help 不依赖
 # PyYAML，因此允许用户在安装依赖前查看用法。
 if [[ "$SERVICE_TYPE" != "help" && "$SERVICE_TYPE" != "--help" && "$SERVICE_TYPE" != "-h" ]]; then
-    config_exports="$(python3 "${DISTRIBUTED_SERVICES_ROOT}/config/load_config.py")"
+    CONFIG_PYTHON="${CONFIG_PYTHON:-}"
+    if [[ -z "$CONFIG_PYTHON" ]]; then
+        for candidate in python3 python; do
+            if command -v "$candidate" >/dev/null 2>&1 && "$candidate" -c "import yaml" >/dev/null 2>&1; then
+                CONFIG_PYTHON="$candidate"
+                break
+            fi
+        done
+    fi
+    CONFIG_PYTHON="${CONFIG_PYTHON:-python3}"
+
+    if ! config_exports="$("$CONFIG_PYTHON" "${DISTRIBUTED_SERVICES_ROOT}/config/load_config.py")"; then
+        echo "[ERROR] Failed to load config with CONFIG_PYTHON=${CONFIG_PYTHON}." >&2
+        echo "[ERROR] Install PyYAML in that environment or run with CONFIG_PYTHON=/path/to/python." >&2
+        exit 1
+    fi
     eval "${config_exports}"
 fi
 

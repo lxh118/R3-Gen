@@ -30,7 +30,7 @@ def detect_gpu_count():
             gpu_count = len([line for line in result.stdout.strip().split('\n') if line.strip()])
             if gpu_count > 0:
                 return gpu_count
-    except (subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
+    except (OSError, subprocess.TimeoutExpired, FileNotFoundError, subprocess.SubprocessError):
         pass
     
     # 方法2: 使用 PyTorch（如果可用）
