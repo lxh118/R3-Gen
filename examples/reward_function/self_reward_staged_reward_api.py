@@ -306,8 +306,8 @@ def filter_thinking_part(response, eos_token=None):
     提取answer部分（去除think标签）
 
     支持两种格式：
-    1. 标准格式：<think>think内容</think>answer
-    2. 只有结束标签：think内容</think>answer（模型偏好格式）
+    1. 标准格式：<thinking>think内容</thinking>answer
+    2. 只有结束标签：think内容</thinking>answer（模型偏好格式）
     """
     response_start = 0
     success = False
@@ -347,10 +347,10 @@ def think_format_reward(response: str) -> float:
     检查think标签格式奖励
 
     支持两种格式：
-    1. 标准格式：<think>think内容</think>answer
-    2. 只有结束标签：think内容</think>answer（模型偏好格式）
+    1. 标准格式：<thinking>think内容</thinking>answer
+    2. 只有结束标签：think内容</thinking>answer（模型偏好格式）
 
-    只要检测到结束标签 `</think>` 就认为有 think 格式
+    只要检测到结束标签 `</thinking>` 就认为有 think 格式
     """
     r = (response or "").strip()
 
@@ -651,12 +651,12 @@ def extract_edit_info(response: str) -> Optional[Dict[str, str]]:
     使用与json_format_reward相同的验证逻辑（is_valid_edit_prompt），确保一致性
 
     更鲁棒的提取策略：
-    1. 首先尝试从 `</think>` 之后提取JSON
+    1. 首先尝试从 `</thinking>` 之后提取JSON
     2. 如果失败，尝试从整个响应中查找JSON（可能JSON在think内容中）
     3. 如果还是失败，尝试从think内容中提取JSON（模型可能在think中写了JSON）
     """
     try:
-        # 策略1：尝试从 `</think>` 之后提取JSON（标准位置）
+        # 策略1：尝试从 `</thinking>` 之后提取JSON（标准位置）
         response_clean, has_think_tag = filter_thinking_part(response)
 
         # 尝试解析JSON
@@ -707,8 +707,8 @@ def extract_edit_info(response: str) -> Optional[Dict[str, str]]:
                     pass
 
         # 策略3：如果策略2也失败，尝试从think内容中提取JSON
-        # 查找think内容（在 `</think>` 之前）
-        think_tag_end = '</think>'
+        # 查找think内容（在 `</thinking>` 之前）
+        think_tag_end = '</thinking>'
         think_end = response.rfind(think_tag_end)
         if think_end != -1:
             think_content = response[:think_end]
