@@ -8,6 +8,40 @@ export VAL_DATA_PATH=/path/to/val.json
 export IMAGE_DIR=/path/to/images
 ```
 
+## Demo Training Set
+
+`demo_train.json` is a compact training demo with 104 examples. It is balanced across eight dimensions (`object`, `color`, `shape`, `texture`, `spatial`, `numeracy`, `non`, and `complex`), with 13 examples per dimension and a 7/6 false/true split in each dimension.
+
+The examples are sampled from the paper's training data construction sources:
+
+- T2I-R1 generate-and-rank examples.
+- BLIP-3O counterfactual rewriting examples.
+- PICO-Banana visual inversion examples.
+
+Prompts that appear in the R3-Bench validation data are excluded from this demo set.
+
+The JSON uses image paths relative to `examples/data/images`:
+
+```bash
+export TRAIN_DATA_PATH=examples/data/demo_train.json
+export VAL_DATA_PATH=examples/data/demo_train.json
+export IMAGE_DIR=examples/data/images
+```
+
+The image files are kept out of git. The demo image archive is released at [nickname-xingxing/R3-Gen_demoTrain](https://huggingface.co/datasets/nickname-xingxing/R3-Gen_demoTrain). Download and unpack it so the directory layout is:
+
+```text
+examples/data/images/demo_train/
+```
+
+Example download flow after release:
+
+```bash
+export HF_DATASET_REPO=nickname-xingxing/R3-Gen_demoTrain
+huggingface-cli download "$HF_DATASET_REPO" demo_train_images.zip --repo-type dataset --local-dir examples/data
+unzip -o examples/data/demo_train_images.zip -d examples/data/images
+```
+
 The default config uses `data.answer_key=ground_truth`, so each item should contain at least:
 
 ```json

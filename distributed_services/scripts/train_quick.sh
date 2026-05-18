@@ -15,8 +15,8 @@ project_name="${PROJECT_NAME:-R3-Gen}"
 experiment_name="${EXPERIMENT_NAME:-r3-gen-grpo}"
 model_path="${MODEL_PATH:?Set MODEL_PATH to the policy checkpoint or base VLM.}"
 
-train_data_path="${TRAIN_DATA_PATH:-examples/data/train.json}"
-val_data_path="${VAL_DATA_PATH:-examples/data/val.json}"
+train_data_path="${TRAIN_DATA_PATH:-examples/data/demo_train.json}"
+val_data_path="${VAL_DATA_PATH:-examples/data/demo_train.json}"
 image_dir="${IMAGE_DIR:-examples/data/images}"
 save_checkpoint_path="${SAVE_CHECKPOINT_PATH:-checkpoints/${project_name}/${experiment_name}}"
 

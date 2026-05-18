@@ -220,6 +220,7 @@ distributed_services/config/service_endpoints.env
 !distributed_services/config/service_endpoints.example.env
 examples/data/*.json
 examples/data/*.jsonl
+!examples/data/demo_train.json
 examples/data/images/*
 !examples/data/README.md
 !examples/data/images/.gitkeep

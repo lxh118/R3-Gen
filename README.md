@@ -22,12 +22,14 @@ Some optional services require extra model-specific dependencies:
 
 - BAGEL edit server: BAGEL runtime and model weights.（https://github.com/bytedance-seed/BAGEL）
 - Qwen image-edit server: `diffusers` with Qwen-Image-Edit support and optional `cache-dit`.（https://huggingface.co/Qwen/Qwen-Image-Edit-2511）（https://github.com/vipshop/cache-dit）
-- R3-Gen self-reward server: the self-reward MLLM runtime and model weights.
+- R3-Gen self-reward server: a compatible MLLM runtime and weights. For a public demo backend, `SELF_REWARD_MODEL_TYPE=qwen3vl` can point to [Qwen/Qwen3-VL-8B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct). Replace it with an R3-Gen self-reward checkpoint if you release one.
 - SAM3 reward server: SAM3 package and checkpoints.（https://github.com/facebookresearch/sam3）
 
 ## Prepare Data
 
 Place your training JSON files and images outside the repository or under `examples/data/` locally. See [examples/data/README.md](examples/data/README.md) for the expected schema.
+
+This repository includes a small demo JSON at `examples/data/demo_train.json`. Download the matching image archive from [nickname-xingxing/R3-Gen_demoTrain](https://huggingface.co/datasets/nickname-xingxing/R3-Gen_demoTrain) so the files appear under `examples/data/images/demo_train/`, then the default `train_quick.sh` data paths work directly.
 
 Typical variables:
 
@@ -35,6 +37,14 @@ Typical variables:
 export TRAIN_DATA_PATH=/path/to/train.json
 export VAL_DATA_PATH=/path/to/val.json
 export IMAGE_DIR=/path/to/images
+```
+
+For the demo set:
+
+```bash
+export TRAIN_DATA_PATH=examples/data/demo_train.json
+export VAL_DATA_PATH=examples/data/demo_train.json
+export IMAGE_DIR=examples/data/images
 ```
 
 ## Start Services
