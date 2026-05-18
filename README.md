@@ -103,7 +103,6 @@ Common overrides:
 export PROJECT_NAME=R3-Gen
 export EXPERIMENT_NAME=r3-gen-grpo
 export N_GPUS_PER_NODE=8
-export ROLLOUT_BATCH_SIZE=128
 export FORMAT_PROMPT=examples/format_prompt/qwen3_vl_edit_optimized.jinja
 export REWARD_FUNCTION=examples/reward_function/self_reward_staged_reward_api.py:compute_score
 ```
