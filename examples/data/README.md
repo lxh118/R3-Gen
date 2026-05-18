@@ -10,7 +10,7 @@ export IMAGE_DIR=/path/to/images
 
 ## Demo Training Set
 
-`demo_train.json` is a compact training demo with 104 examples. It is balanced across eight dimensions (`object`, `color`, `shape`, `texture`, `spatial`, `numeracy`, `non`, and `complex`), with 13 examples per dimension and a 7/6 false/true split in each dimension.
+`demo_train.json` is a compact training demo with 97 manually reviewed examples. It is kept roughly balanced across eight dimensions (`object`, `color`, `shape`, `texture`, `spatial`, `numeracy`, `non`, and `complex`) after filtering uncertain labels.
 
 The examples are sampled from the paper's training data construction sources:
 
@@ -147,4 +147,4 @@ For `complex`, use `nouns` and optionally `spatial_info`.
 
 ## Backward Compatibility
 
-Older data may include `ground_truth.image_path`. The reward function can still use it as a fallback, but new data should rely on the top-level `images` field plus `IMAGE_DIR`.
+Older data may include `ground_truth.image_path`. The dataset loader and reward function can still use it as a fallback when the top-level `images` path is unavailable, but new data should rely on the top-level `images` field plus `IMAGE_DIR`.

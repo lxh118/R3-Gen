@@ -98,13 +98,6 @@
     "ground_truth": "{\"answer\": false, \"category\": \"color\", \"prompt\": \"a photo of a pink computer mouse and a white skateboard\", \"nouns\": [\"computer mouse\", \"skateboard\"], \"attr_nouns\": [\"pink computer mouse\", \"white skateboard\"], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/color/0013_t2i_r1_false.png\"}"
   },
   {
-    "prompt": "A cat sitting next to a green bicycle on a white lawn.",
-    "images": [
-      "demo_train/color/0014_t2i_r1_false.png"
-    ],
-    "ground_truth": "{\"answer\": false, \"category\": \"color\", \"prompt\": \"A cat sitting next to a green bicycle on a white lawn.\", \"nouns\": [\"cat\", \"bicycle\", \"lawn\"], \"attr_nouns\": [\"green bicycle\", \"white lawn\"], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/color/0014_t2i_r1_false.png\"}"
-  },
-  {
     "prompt": "a photo of a red bus and a pink sandwich",
     "images": [
       "demo_train/color/0015_t2i_r1_false.png"
@@ -287,13 +280,6 @@
     "ground_truth": "{\"answer\": false, \"category\": \"texture\", \"prompt\": \"The plastic shower curtain and fluffy bath mat rest on the metallic hooks in the bathroom.\", \"nouns\": [\"curtain\", \"mat\", \"hook\", \"bathroom\"], \"attr_nouns\": [\"plastic shower curtain\", \"fluffy bath mat\", \"metallic hook\"], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/texture/0040_t2i_r1_false.png\"}"
   },
   {
-    "prompt": "a rubber eraser and a fabric pants",
-    "images": [
-      "demo_train/texture/0041_t2i_r1_false.png"
-    ],
-    "ground_truth": "{\"answer\": false, \"category\": \"texture\", \"prompt\": \"a rubber eraser and a fabric pants\", \"nouns\": [\"eraser\", \"pants\"], \"attr_nouns\": [\"rubber eraser\", \"fabric pant\"], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/texture/0041_t2i_r1_false.png\"}"
-  },
-  {
     "prompt": "a rubber ball and a metallic watch",
     "images": [
       "demo_train/texture/0042_t2i_r1_false.png"
@@ -364,13 +350,6 @@
     "ground_truth": "{\"answer\": true, \"category\": \"texture\", \"prompt\": \"a plastic cutlery and a metallic watch\", \"nouns\": [\"cutlery\", \"watch\"], \"attr_nouns\": [\"plastic cutlery\", \"metallic watch\"], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/texture/0051_t2i_r1_true.png\"}"
   },
   {
-    "prompt": "a boy on the top of a wallet",
-    "images": [
-      "demo_train/spatial/0052_t2i_r1_false.png"
-    ],
-    "ground_truth": "{\"answer\": false, \"category\": \"spatial\", \"prompt\": \"a boy on the top of a wallet\", \"nouns\": [\"boy\", \"wallet\"], \"spatial_info\": {\"obj1\": \"boy\", \"obj2\": \"wallet\", \"locality\": \"on the top of\"}, \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/spatial/0052_t2i_r1_false.png\"}"
-  },
-  {
     "prompt": "a cat on the right of a phone",
     "images": [
       "demo_train/spatial/0053_t2i_r1_false.png"
@@ -434,13 +413,6 @@
     "ground_truth": "{\"answer\": false, \"category\": \"spatial\", \"prompt\": \"A silhouette of multiple trees with varying branch structures is set against a gradient orange sky, with two bright light sources partially obscured by the branches.\", \"edit_type\": \"Relocate an object (change its position/spatial relation)\", \"data_source\": \"PICO-Banana\", \"construction_strategy\": \"visual_inversion\", \"image_path\": \"demo_train/spatial/0061_pico_banana_false.jpg\"}"
   },
   {
-    "prompt": "An outdoor nighttime scene featuring a stage with a stone structure, fireworks emitting white sparks in the sky, green smoke rising from the left side, multiple tripods with equipment, and a person standing near the center of the stage.",
-    "images": [
-      "demo_train/spatial/0062_pico_banana_false.jpg"
-    ],
-    "ground_truth": "{\"answer\": false, \"category\": \"spatial\", \"prompt\": \"An outdoor nighttime scene featuring a stage with a stone structure, fireworks emitting white sparks in the sky, green smoke rising from the left side, multiple tripods with equipment, and a person standing near the center of the stage.\", \"edit_type\": \"Replace one object category with another\", \"data_source\": \"PICO-Banana\", \"construction_strategy\": \"visual_inversion\", \"image_path\": \"demo_train/spatial/0062_pico_banana_false.jpg\"}"
-  },
-  {
     "prompt": "Three bicycles are parked against a black metal railing overlooking a canal lined with green trees and buildings. A tall tower is visible in the distance at the end of the canal. Several boats are docked along the canal.",
     "images": [
       "demo_train/spatial/0063_pico_banana_true.png"
@@ -453,13 +425,6 @@
       "demo_train/spatial/0064_pico_banana_true.png"
     ],
     "ground_truth": "{\"answer\": true, \"category\": \"spatial\", \"prompt\": \"A wide pedestrian street lined with buildings on both sides; numerous people walking in various directions; banners hanging from poles on both sides of the street; trees with green foliage on the left side; a domed building visible in the background at the end of the street.\", \"edit_type\": \"Adjust global lighting (golden hour/fluorescent)\", \"data_source\": \"PICO-Banana\", \"construction_strategy\": \"visual_inversion\", \"image_path\": \"demo_train/spatial/0064_pico_banana_true.png\"}"
-  },
-  {
-    "prompt": "two shrimp",
-    "images": [
-      "demo_train/numeracy/0065_t2i_r1_false.png"
-    ],
-    "ground_truth": "{\"answer\": false, \"category\": \"numeracy\", \"prompt\": \"two shrimp\", \"nouns\": [\"shrimp\"], \"numeracy_info\": [{\"obj_name\": \"shrimp\", \"num\": 2}], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/numeracy/0065_t2i_r1_false.png\"}"
   },
   {
     "prompt": "a photo of four kites",
@@ -616,13 +581,6 @@
     "ground_truth": "{\"answer\": true, \"category\": \"non\", \"prompt\": \"A spider is crawling up a wall.\", \"nouns\": [\"spider\", \"wall\"], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/non/0087_t2i_r1_true.png\"}"
   },
   {
-    "prompt": "A child is playing with a kaleidoscope and marveling at the patterns.",
-    "images": [
-      "demo_train/non/0088_t2i_r1_true.png"
-    ],
-    "ground_truth": "{\"answer\": true, \"category\": \"non\", \"prompt\": \"A child is playing with a kaleidoscope and marveling at the patterns.\", \"nouns\": [\"child\", \"kaleidoscope\"], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/non/0088_t2i_r1_true.png\"}"
-  },
-  {
     "prompt": "A pet owner is snuggling with their furry friend, enjoying their companionship and love.",
     "images": [
       "demo_train/non/0089_t2i_r1_true.png"
@@ -677,13 +635,6 @@
       "demo_train/complex/0096_t2i_r1_false.png"
     ],
     "ground_truth": "{\"answer\": false, \"category\": \"complex\", \"prompt\": \"The square mirror was hung above the black vanity.\", \"nouns\": [\"mirror\", \"vanity\"], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/complex/0096_t2i_r1_false.png\"}"
-  },
-  {
-    "prompt": "The bright yellow school bus drove past the tall brick building.",
-    "images": [
-      "demo_train/complex/0097_t2i_r1_false.png"
-    ],
-    "ground_truth": "{\"answer\": false, \"category\": \"complex\", \"prompt\": \"The bright yellow school bus drove past the tall brick building.\", \"nouns\": [\"bus\", \"building\"], \"data_source\": \"T2I-R1\", \"construction_strategy\": \"generate_and_rank\", \"image_path\": \"demo_train/complex/0097_t2i_r1_false.png\"}"
   },
   {
     "prompt": "The square mirror was hung above the white sink.",

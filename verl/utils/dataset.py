@@ -1,5 +1,6 @@
 
 
+import json
 import math
 import os
 from collections import defaultdict
@@ -154,6 +155,50 @@ class RLHFDataset(Dataset):
                 num_proc=filter_overlong_prompts_workers,
             )
 
+    def _ground_truth_image_path(self, example: dict[str, Any]) -> Optional[str]:
+        ground_truth = example.get(self.answer_key)
+        if isinstance(ground_truth, str):
+            try:
+                ground_truth = json.loads(ground_truth)
+            except json.JSONDecodeError:
+                return None
+
+        if isinstance(ground_truth, dict):
+            image_path = ground_truth.get("image_path")
+            if isinstance(image_path, str) and image_path:
+                return image_path
+
+        return None
+
+    def _resolve_local_path(self, path: str) -> str:
+        if self.image_dir is not None:
+            return os.path.join(self.image_dir, path)
+
+        if not os.path.isabs(path):
+            import warnings
+            warnings.warn(
+                f"image_dir is None but images are relative paths. "
+                f"Please set data.image_dir parameter (e.g., data.image_dir=/path/to/images). "
+                f"Current image path: {path}",
+                UserWarning,
+            )
+        return path
+
+    def _resolve_image_paths(self, example: dict[str, Any], images: list[Any]) -> list[Any]:
+        if len(images) == 0 or not isinstance(images[0], str):
+            return images
+
+        fallback_image = self._ground_truth_image_path(example)
+        fallback_path = self._resolve_local_path(fallback_image) if fallback_image else None
+        resolved_images = []
+        for idx, image in enumerate(images):
+            image_path = self._resolve_local_path(image)
+            if idx == 0 and not os.path.exists(image_path) and fallback_path and os.path.exists(fallback_path):
+                image_path = fallback_path
+            resolved_images.append(image_path)
+
+        return resolved_images
+
     def _build_messages(self, example: dict[str, Any]) -> list[dict[str, Any]]:
         prompt_str: str = example[self.prompt_key]
         if self.format_prompt:
@@ -198,18 +243,7 @@ class RLHFDataset(Dataset):
                 prompt = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
             else:
                 prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
-            images = example[self.image_key]
-            if self.image_dir is not None and len(images) != 0 and isinstance(images[0], str):  # image paths
-                images = [os.path.join(self.image_dir, image) for image in images]
-            elif self.image_dir is None and len(images) != 0 and isinstance(images[0], str):
-                # 如果 image_dir 为 None，但 images 是相对路径，输出警告
-                import warnings
-                warnings.warn(
-                    f"image_dir is None but images are relative paths. "
-                    f"Please set data.image_dir parameter (e.g., data.image_dir=/path/to/images). "
-                    f"Current image path: {images[0] if images else 'N/A'}",
-                    UserWarning
-                )
+            images = self._resolve_image_paths(example, example[self.image_key])
 
             processed_images = [] if len(images) != 0 else None  # text-only data
             for image in images:
@@ -259,18 +293,7 @@ class RLHFDataset(Dataset):
                 prompt = self.tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
             else:
                 prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True, tokenize=False)
-            images = example.pop(self.image_key)
-            if self.image_dir is not None and len(images) != 0 and isinstance(images[0], str):  # image paths
-                images = [os.path.join(self.image_dir, image) for image in images]
-            elif self.image_dir is None and len(images) != 0 and isinstance(images[0], str):
-                # 如果 image_dir 为 None，但 images 是相对路径，输出警告
-                import warnings
-                warnings.warn(
-                    f"image_dir is None but images are relative paths. "
-                    f"Please set data.image_dir parameter (e.g., data.image_dir=/path/to/images). "
-                    f"Current image path: {images[0] if images else 'N/A'}",
-                    UserWarning
-                )
+            images = self._resolve_image_paths(example, example.pop(self.image_key))
 
             processed_images = [] if len(images) != 0 else None  # text-only data
             for image in images:

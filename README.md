@@ -20,10 +20,10 @@ pip install -e .
 
 Some optional services require extra model-specific dependencies:
 
-- BAGEL edit server: BAGEL runtime and model weights.（https://github.com/bytedance-seed/BAGEL）
-- Qwen image-edit server: `diffusers` with Qwen-Image-Edit support and optional `cache-dit`.（https://huggingface.co/Qwen/Qwen-Image-Edit-2511）（https://github.com/vipshop/cache-dit）
+- BAGEL edit server: [BAGEL](https://github.com/bytedance-seed/BAGEL) runtime and model weights.
+- Qwen image-edit server: `diffusers` with [Qwen-Image-Edit](https://huggingface.co/Qwen/Qwen-Image-Edit-2511) support and optional [cache-dit](https://github.com/vipshop/cache-dit).
 - R3-Gen self-reward server: a compatible MLLM runtime and weights. For a public demo backend, `SELF_REWARD_MODEL_TYPE=qwen3vl` can point to [Qwen/Qwen3-VL-8B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct). Replace it with an R3-Gen self-reward checkpoint if you release one.
-- SAM3 reward server: SAM3 package and checkpoints.（https://github.com/facebookresearch/sam3）
+- SAM3 reward server: [SAM3](https://github.com/facebookresearch/sam3) package and checkpoints.
 
 ## Prepare Data
 
