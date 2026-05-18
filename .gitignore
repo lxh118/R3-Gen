@@ -214,7 +214,9 @@ tmp/
 logs/
 distributed_services/logs/
 distributed_services/config/*_endpoints.txt
+distributed_services/config/service_endpoints.env
 !distributed_services/config/*_endpoints.example.txt
+!distributed_services/config/service_endpoints.example.env
 examples/data/*.json
 examples/data/*.jsonl
 examples/data/images/*

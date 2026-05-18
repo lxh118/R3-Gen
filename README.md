@@ -67,6 +67,8 @@ bash distributed_services/scripts/deploy_services.sh get_config
 source distributed_services/config/service_endpoints.env
 ```
 
+Generated endpoint files are local runtime artifacts and are ignored by git.
+
 More details are in [docs/SERVICES.md](docs/SERVICES.md).
 
 ## Train
