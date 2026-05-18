@@ -212,6 +212,7 @@ outputs/
 wandb/
 tmp/
 logs/
+logs-acp-*.txt.gz
 distributed_services/logs/
 distributed_services/config/*_endpoints.txt
 distributed_services/config/service_endpoints.env

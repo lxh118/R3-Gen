@@ -8,6 +8,8 @@ cd "${PROJECT_ROOT}"
 
 export VLLM_DISABLE_SYMMETRIC_MEMORY="${VLLM_DISABLE_SYMMETRIC_MEMORY:-1}"
 export VLLM_USE_V1="${VLLM_USE_V1:-1}"
+export HF_HOME="${HF_HOME:-${PROJECT_ROOT}/.cache/huggingface}"
+export HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-${HF_HOME}/datasets}"
 
 project_name="${PROJECT_NAME:-R3-Gen}"
 experiment_name="${EXPERIMENT_NAME:-r3-gen-grpo}"
@@ -47,6 +49,9 @@ fi
 python_bin="${PYTHON_BIN:-python3}"
 config_exports="$("${python_bin}" distributed_services/config/load_config.py --config "${config_file}")"
 eval "${config_exports}"
+if [[ "${HF_ENDPOINT+x}" == "x" && -z "${HF_ENDPOINT}" ]]; then
+    unset HF_ENDPOINT
+fi
 
 "${python_bin}" -m verl.trainer.main \
     config="${verl_base_config_rel}" \

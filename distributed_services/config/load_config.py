@@ -132,7 +132,9 @@ def get_env_vars(config):
     
     # 其他配置
     other = config.get("other", {})
-    env_vars["HF_ENDPOINT"] = other.get("hf_endpoint", "")
+    hf_endpoint = other.get("hf_endpoint", "")
+    if hf_endpoint:
+        env_vars["HF_ENDPOINT"] = hf_endpoint
     wandb = other.get("wandb", {})
     env_vars["WANDB_API_KEY"] = wandb.get("api_key", "")
     env_vars["WANDB_MODE"] = wandb.get("mode", "offline")
