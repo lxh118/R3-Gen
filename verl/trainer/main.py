@@ -140,10 +140,36 @@ def main():
         if "VLLM_USE_V1" not in runtime_env_vars:
             runtime_env_vars["VLLM_USE_V1"] = "1"
         
-        runtime_env = {
-            "env_vars": runtime_env_vars
+        runtime_env = {"env_vars": runtime_env_vars}
+
+        ray_init_kwargs = {
+            "runtime_env": runtime_env,
+            "ignore_reinit_error": True,
+            "log_to_driver": True,
         }
-        ray.init(runtime_env=runtime_env)
+        ray_address = os.getenv("RAY_ADDRESS")
+        if ray_address:
+            ray_init_kwargs["address"] = ray_address
+        else:
+            include_dashboard = os.getenv("RAY_INCLUDE_DASHBOARD", "0").lower() in {"1", "true", "yes"}
+            ray_init_kwargs["include_dashboard"] = include_dashboard
+
+            if os.getenv("RAY_NUM_CPUS"):
+                ray_init_kwargs["num_cpus"] = int(os.environ["RAY_NUM_CPUS"])
+            if os.getenv("RAY_NUM_GPUS"):
+                ray_init_kwargs["num_gpus"] = int(os.environ["RAY_NUM_GPUS"])
+            if os.getenv("RAY_OBJECT_STORE_MEMORY"):
+                ray_init_kwargs["object_store_memory"] = int(os.environ["RAY_OBJECT_STORE_MEMORY"])
+            if os.getenv("RAY_TMPDIR"):
+                ray_init_kwargs["_temp_dir"] = os.environ["RAY_TMPDIR"]
+            if os.getenv("RAY_WORKER_REGISTER_TIMEOUT_SECONDS"):
+                ray_init_kwargs["_system_config"] = {
+                    "worker_register_timeout_seconds": int(os.environ["RAY_WORKER_REGISTER_TIMEOUT_SECONDS"])
+                }
+
+        print(f"[INFO] Initializing Ray with kwargs: { {k: v for k, v in ray_init_kwargs.items() if k != 'runtime_env'} }", flush=True)
+        ray.init(**ray_init_kwargs)
+        print(f"[INFO] Ray initialized. cluster_resources={ray.cluster_resources()}", flush=True)
 
     runner = Runner.remote()
     ray.get(runner.run.remote(ppo_config))
