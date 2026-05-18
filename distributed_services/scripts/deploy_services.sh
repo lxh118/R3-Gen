@@ -1082,66 +1082,19 @@ read_reward_server_endpoints() {
     REWARD_ENDPOINTS_SAM3="$reward_endpoints_sam3"
 }
 
-# 生成默认端点
-# 参数: $1=当前节点IP, $2=编辑服务端点变量名（通过 nameref 修改）, $3=CLIP端点变量名, $4=self-reward端点变量名, $5=SAM3端点变量名
-generate_default_endpoints() {
-    local current_ip="$1"
-    local -n edit_endpoints_ref="$2"  # nameref，直接修改传入的变量
-    local -n reward_endpoints_clip_ref="$3"
-    local -n reward_endpoints_self_reward_ref="$4"
-    local -n reward_endpoints_sam3_ref="$5"
-    
-    local num_gpus="${GPUS_PER_NODE:-8}"
-    if [[ "$num_gpus" -le 0 ]]; then
-        num_gpus=8  # 默认8个GPU
+# 检查端点配置是否存在。get_config 不再伪造当前节点端点，避免训练节点被误当成服务节点。
+warn_missing_endpoint_configs() {
+    local edit_endpoints="$1"
+    local reward_endpoints_clip="$2"
+    local reward_endpoints_self_reward="$3"
+    local reward_endpoints_sam3="$4"
+
+    if [[ -z "$edit_endpoints" ]]; then
+        echo "[WARNING] 未找到编辑服务端点。请先启动 edit_server，复制 edit_server_endpoints.txt，或在训练前手动设置 EDIT_SERVER_ENDPOINTS。"
     fi
-    
-    # 生成编辑服务端点
-    if [[ -z "$edit_endpoints_ref" ]]; then
-        echo "[WARNING] edit_server_endpoints.txt 不存在或为空，使用当前节点生成编辑服务端点"
-        for i in $(seq 0 $((num_gpus - 1))); do
-            if [[ -n "$edit_endpoints_ref" ]]; then
-                edit_endpoints_ref="${edit_endpoints_ref},"
-            fi
-            edit_endpoints_ref="${edit_endpoints_ref}http://${current_ip}:$((EDIT_SERVER_BASE_PORT + i))"
-        done
-        echo "[INFO] 生成了 $num_gpus 个编辑服务端点（基于当前节点: $current_ip）"
-    fi
-    
-    # 生成奖励服务端点
-    if [[ -z "$reward_endpoints_clip_ref" && -z "$reward_endpoints_self_reward_ref" && -z "$reward_endpoints_sam3_ref" ]]; then
-        echo "[WARNING] reward_server_endpoints.txt 不存在或为空，使用当前节点生成奖励服务端点"
-        local default_reward_type
-        default_reward_type="$(normalize_reward_type "${REWARD_TYPE:-self_reward}")"
-        
-        if [[ "$default_reward_type" == "sam3" ]]; then
-            # 生成 SAM3 端点
-            for i in $(seq 0 $((num_gpus - 1))); do
-                if [[ -n "$reward_endpoints_sam3_ref" ]]; then
-                    reward_endpoints_sam3_ref="${reward_endpoints_sam3_ref},"
-                fi
-                reward_endpoints_sam3_ref="${reward_endpoints_sam3_ref}http://${current_ip}:$((SAM3_REWARD_SERVER_BASE_PORT + i))"
-            done
-            echo "[INFO] 生成了 $num_gpus 个 SAM3 奖励服务端点（基于当前节点: $current_ip）"
-        elif [[ "$default_reward_type" == "self_reward" ]]; then
-            # 生成 R3-Gen self-reward 端点
-            for i in $(seq 0 $((num_gpus - 1))); do
-                if [[ -n "$reward_endpoints_self_reward_ref" ]]; then
-                    reward_endpoints_self_reward_ref="${reward_endpoints_self_reward_ref},"
-                fi
-                reward_endpoints_self_reward_ref="${reward_endpoints_self_reward_ref}http://${current_ip}:$((REWARD_SERVER_BASE_PORT + i))"
-            done
-            echo "[INFO] 生成了 $num_gpus 个 R3-Gen self-reward 奖励服务端点（基于当前节点: $current_ip）"
-        else
-            # 生成 CLIP 端点
-            for i in $(seq 0 $((num_gpus - 1))); do
-                if [[ -n "$reward_endpoints_clip_ref" ]]; then
-                    reward_endpoints_clip_ref="${reward_endpoints_clip_ref},"
-                fi
-                reward_endpoints_clip_ref="${reward_endpoints_clip_ref}http://${current_ip}:$((REWARD_SERVER_BASE_PORT + i))"
-            done
-            echo "[INFO] 生成了 $num_gpus 个 CLIP 奖励服务端点（基于当前节点: $current_ip）"
-        fi
+
+    if [[ -z "$reward_endpoints_clip" && -z "$reward_endpoints_self_reward" && -z "$reward_endpoints_sam3" ]]; then
+        echo "[WARNING] 未找到奖励服务端点。请先启动 reward_server，复制对应 reward endpoint 文件，或在训练前手动设置 REWARD_SERVER_ENDPOINTS。"
     fi
 }
 
@@ -1253,7 +1206,7 @@ get_config() {
     local export_file="${CONFIG_DIR}/service_endpoints.env"
     mkdir -p "${CONFIG_DIR}"
     
-    # 获取当前节点的IP地址（仅在配置文件不存在时使用，用于生成默认端点）
+    # 打印当前节点 IP，方便用户核对生成的 endpoint 文件是否来自预期机器。
     local current_ip=$(get_server_address)
     echo "[INFO] 当前节点IP地址: $current_ip"
     
@@ -1266,8 +1219,8 @@ get_config() {
     local reward_endpoints_self_reward="$REWARD_ENDPOINTS_SELF_REWARD"
     local reward_endpoints_sam3="$REWARD_ENDPOINTS_SAM3"
     
-    # 如果配置文件不存在或为空，生成默认端点
-    generate_default_endpoints "$current_ip" "edit_endpoints" "reward_endpoints_clip" "reward_endpoints_self_reward" "reward_endpoints_sam3"
+    # 只从已有 endpoint 文件生成环境变量；缺失时警告，不伪造当前节点端点。
+    warn_missing_endpoint_configs "$edit_endpoints" "$reward_endpoints_clip" "$reward_endpoints_self_reward" "$reward_endpoints_sam3"
     
     # 获取奖励类型（从环境变量读取，默认 self_reward）
     local reward_type

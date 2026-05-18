@@ -98,6 +98,8 @@ export REWARD_SERVER_ENDPOINTS="http://reward-node:6001,http://reward-node:6002"
 export SELF_REWARD_SERVER_ENDPOINTS="$REWARD_SERVER_ENDPOINTS"
 ```
 
+`get_config` only collects endpoints that already exist in endpoint files. It does not guess service addresses from the training node IP.
+
 `service_endpoints.env` and the `*_endpoints.txt` files are machine-local runtime files and are ignored by git.
 
 ## 4. Start Training
