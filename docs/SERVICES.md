@@ -34,6 +34,16 @@ export EDIT_MODEL_TYPE=qwen_image_edit
 
 The edit service exposes `/edit` and `/health`.
 
+Shortcut wrappers are also available:
+
+```bash
+export EDIT_MODEL_PATH=/path/to/BAGEL-7B-MoT
+bash distributed_services/scripts/start_bagel_simple.sh
+
+export EDIT_MODEL_PATH=/path/to/Qwen-Image-Edit
+bash distributed_services/scripts/start_qwen_simple.sh
+```
+
 ## 2. Start Reward Service
 
 Run this on the reward-service machine:
@@ -121,7 +131,7 @@ bash distributed_services/scripts/train_llava_onevision.sh
 
 ## Scaling
 
-To use more GPUs on one service node, set `GPUS_PER_NODE` or edit `distributed_services/config/config.yaml` before starting the service. To use more nodes, run the same edit or reward startup command on additional machines and collect their endpoint files on the training node before `get_config`.
+To use more GPUs on one service node, set `GPUS_PER_NODE` or edit `distributed_services/config/config.yaml` before starting the service. To use more service nodes, run the same edit or reward startup command on additional machines and collect their endpoint files on the training node before `get_config`.
 
 For mixed reward serving, map local GPU ids to reward types:
 
@@ -130,6 +140,27 @@ export REWARD_TYPE=mixed
 export REWARD_TYPE_PER_GPU="0:self_reward,1:self_reward,2:clip,3:sam3"
 bash distributed_services/scripts/deploy_services.sh reward_server
 ```
+
+Training can also use a multi-node Ray cluster. Start Ray on the training head and worker nodes first, then run training from the head node with `NNODES` and `N_GPUS_PER_NODE` set:
+
+```bash
+# Head training node
+ray stop --force
+ray start --head
+
+# Worker training node
+ray stop --force
+ray start --address='HEAD_NODE_IP:6379'
+bash distributed_services/scripts/ray.sh  # optional keep-alive helper
+
+# Back on the head node
+export NNODES=2
+export N_GPUS_PER_NODE=4
+source distributed_services/config/service_endpoints.env
+bash distributed_services/scripts/train_quick.sh
+```
+
+`ray.sh` does not start Ray; it only keeps a worker-node shell or scheduler job alive after `ray start --address=...`.
 
 ## Checks
 
