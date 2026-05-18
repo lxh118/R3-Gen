@@ -1,22 +1,17 @@
-# R3-Gen
+# Overview
 
-Official code release for **R3-Gen: Reason, Reflect, Rectify for Reflective Visual Generation**.
-
-R3-Gen trains a reflective vision-language policy with online image-edit rollouts and reward feedback. The training process is built around three pieces:
+Official code release for **Benchmarking and Evolving
+Reason-Reflect-Rectify for Reflective Visual Generation**.
 
 <p align="center">
-  <img src="assets/paper_teaser.png" alt="R3-Gen paper teaser" width="70%">
+  <img src="assets/r3_refiner_pipeline.png" alt="R3-Refiner training pipeline" width="95%">
 </p>
 
-- `verl/`: the GRPO training loop, multimodal data loader, FSDP workers, vLLM rollout, reward manager, and checkpoint utilities.
-- `examples/`: prompt templates and staged reward functions used by the policy.
-- `distributed_services/`: HTTP services and clients for image editing and reward scoring. Editing and reward models are served as long-running processes and are called by the training reward function through endpoints.
-
-Models, datasets, checkpoints, generated images, logs, W&B runs, and analysis scripts are intentionally not included.
+R3-Gen trains a reflective vision-language policy with online image-edit rollouts and reward feedback.
 
 ## Environment
 
-The original experiments used Linux, Python 3.10, CUDA GPUs, Ray, PyTorch/FSDP, vLLM, and Transformers. Install the Python dependencies with:
+Install the Python dependencies with:
 
 ```bash
 pip install -r requirements.txt
@@ -31,7 +26,7 @@ Some optional services require extra model-specific dependencies:
 
 ## Prepare Data
 
-Place your training JSON files and images outside the repository or under `examples/data/` locally. They are ignored by git. See [examples/data/README.md](examples/data/README.md) for the expected schema.
+Place your training JSON files and images outside the repository or under `examples/data/` locally. See [examples/data/README.md](examples/data/README.md) for the expected schema.
 
 Typical variables:
 
@@ -39,7 +34,6 @@ Typical variables:
 export TRAIN_DATA_PATH=/path/to/train.json
 export VAL_DATA_PATH=/path/to/val.json
 export IMAGE_DIR=/path/to/images
-export MODEL_PATH=/path/to/policy_or_base_vlm
 ```
 
 ## Start Services
@@ -106,50 +100,9 @@ bash distributed_services/scripts/train_llava_onevision.sh
   <img src="assets/r3_bench_overview.png" alt="R3-Bench overview" width="95%">
 </p>
 
-## R3-Refiner
-
-<p align="center">
-  <img src="assets/r3_refiner_pipeline.png" alt="R3-Refiner training pipeline" width="95%">
-</p>
-
-## Reward Design
-
-<p align="center">
-  <img src="assets/hrm_effectiveness.png" alt="Hierarchical reward mechanism effectiveness" width="70%">
-</p>
-
-## Iterative Refinement
-
-<p align="center">
-  <img src="assets/iterative_refinement.png" alt="Iterative R3 refinement loop" width="70%">
-</p>
 
 ## Qualitative Examples
 
 <p align="center">
   <img src="assets/qualitative_comparison.png" alt="Qualitative comparison of R3-Refiner" width="95%">
 </p>
-
-## Repository Layout
-
-```text
-R3-Gen/
-├── distributed_services/
-│   ├── clients/          # endpoint client, load balancing, health checks
-│   ├── config/           # public-safe default configs and endpoint templates
-│   ├── scripts/          # service deployment and training launchers
-│   ├── servers/          # edit and reward HTTP servers
-│   ├── bagel_deps/       # lightweight BAGEL server-side code dependencies
-│   └── sam3_deps/        # optional SAM3 reward helpers
-├── examples/
-│   ├── format_prompt/    # chat/prompt templates
-│   └── reward_function/  # staged reward functions
-├── tools/                # local utilities
-└── verl/                 # training framework
-```
-
-## Notes
-
-- Do not commit model checkpoints or datasets. The `.gitignore` excludes the usual local artifact paths.
-- The edit and reward services expose `/health`; the training client periodically checks endpoints and reloads `service_endpoints.env`.
-- The staged reward functions call image-edit and reward services only when the endpoint environment variables are configured.
