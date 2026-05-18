@@ -18,7 +18,6 @@ data:
   seed: 1
   min_pixels: 262144
   max_pixels: 1183744 # 4194304 802816
-  internvl_fixed_resolution: null
   train_filter_overlong_prompts: false
   filter_overlong_prompts: true
 
