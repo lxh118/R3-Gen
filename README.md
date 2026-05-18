@@ -20,21 +20,13 @@ pip install -e .
 
 Some optional services require extra model-specific dependencies:
 
-- BAGEL edit server: BAGEL runtime and model weights.
-- Qwen image-edit server: `diffusers` with Qwen-Image-Edit support and optional `cache-dit`.
-- SAM3 reward server: SAM3 package and checkpoints.
+- BAGEL edit server: BAGEL runtime and model weights.（https://github.com/bytedance-seed/BAGEL）
+- Qwen image-edit server: `diffusers` with Qwen-Image-Edit support and optional `cache-dit`.（https://huggingface.co/Qwen/Qwen-Image-Edit-2511）（https://github.com/vipshop/cache-dit）
+- SAM3 reward server: SAM3 package and checkpoints.（https://github.com/facebookresearch/sam3）
 
 ## Prepare Data
 
 Place your training JSON files and images outside the repository or under `examples/data/` locally. See [examples/data/README.md](examples/data/README.md) for the expected schema.
-
-Typical variables:
-
-```bash
-export TRAIN_DATA_PATH=/path/to/train.json
-export VAL_DATA_PATH=/path/to/val.json
-export IMAGE_DIR=/path/to/images
-```
 
 ## Start Services
 
