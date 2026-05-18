@@ -143,7 +143,6 @@ def _get_reward_type_for_current_gpu() -> Optional[str]:
         if cuda_visible:
             # CUDA_VISIBLE_DEVICES 通常是逗号分隔的设备列表
             # 如果设置了，说明当前进程只能看到这些设备，第一个设备对应 gpu_id=0
-            # 但实际物理 GPU ID 可能不同，这里假设 LOCAL_RANK 更准确
             pass
 
     # 解析 REWARD_TYPE_PER_GPU 格式："0:self_reward,1:self_reward,2:self_reward,3:sam3"
@@ -187,7 +186,7 @@ def initialize_clients():
     if _edit_client is None or _reward_client is None or _sam3_reward_client is None:
         _edit_client, _reward_client, _sam3_reward_client = create_clients_from_env()
 
-    # 优化：只在第一次检测到客户端缺失时打印警告，避免重复打印
+    # 只在第一次检测到客户端缺失时打印警告，避免重复打印
     if _edit_client is None and not _client_warning_printed.get("edit_client", False):
         print("Warning: Image edit client not initialized. Check EDIT_SERVER_ENDPOINTS environment variable.")
         _client_warning_printed["edit_client"] = True
@@ -241,17 +240,14 @@ def get_reward_client_for_type(reward_type: str):
                         enable_health_check=enable_health_check
                     )
             except Exception as e:
-                # 优化：只在第一次打印，避免重复打印
                 if not _client_warning_printed.get("self_reward_client_error", False):
                     print(f"[WARNING] 无法创建 self-reward 客户端: {e}")
                     _client_warning_printed["self_reward_client_error"] = True
 
         # 如果没有单独的 self-reward 端点，检查环境变量 REWARD_TYPE
         # 如果 REWARD_TYPE 是 "mixed" 或 "clip"，说明实际使用的是 CLIP 端点
-        # 这种情况下应该返回 None 或给出明确的错误提示，而不是回退到可能不支持 self_reward 的客户端
         env_reward_type = _normalize_reward_type(os.environ.get("REWARD_TYPE", ""))
         if env_reward_type in ["mixed", "clip"]:
-            # 优化：只在第一次打印，避免重复打印
             if not _client_warning_printed.get("self_reward_endpoints_empty", False):
                 print(f"[WARNING] 请求 self_reward 奖励类型，但 SELF_REWARD_SERVER_ENDPOINTS 为空")
                 print(f"[WARNING] 当前 REWARD_TYPE={env_reward_type}，实际可用的端点可能只支持 clip 类型")
@@ -262,9 +258,7 @@ def get_reward_client_for_type(reward_type: str):
             return None
 
         # 如果环境变量 REWARD_TYPE 是 self_reward，尝试使用默认的 reward_client
-        # 但需要确保它支持 self_reward 类型（这种情况下可能配置有问题）
         if _is_self_reward_type(env_reward_type):
-            # 优化：只在第一次打印，避免重复打印
             if not _client_warning_printed.get("reward_type_fallback", False):
                 print(f"[WARNING] REWARD_TYPE={env_reward_type} 但 SELF_REWARD_SERVER_ENDPOINTS 为空，回退到 REWARD_SERVER_ENDPOINTS")
                 print(f"[WARNING] 请确保 REWARD_SERVER_ENDPOINTS 中的端点支持 self_reward 类型")
@@ -273,7 +267,6 @@ def get_reward_client_for_type(reward_type: str):
         return _reward_client
     else:
         # 默认 CLIP，使用默认的 reward_client
-        # 但如果 REWARD_SERVER_ENDPOINTS 中包含 CLIP 端点，应该使用 CLIP_REWARD_SERVER_ENDPOINTS
         clip_endpoints = os.environ.get("CLIP_REWARD_SERVER_ENDPOINTS", "")
         if clip_endpoints:
             try:
@@ -294,7 +287,6 @@ def get_reward_client_for_type(reward_type: str):
                         enable_health_check=enable_health_check
                     )
             except Exception as e:
-                # 优化：只在第一次打印，避免重复打印
                 if not _client_warning_printed.get("clip_client_error", False):
                     print(f"[WARNING] 无法创建 CLIP 客户端: {e}")
                     _client_warning_printed["clip_client_error"] = True
@@ -456,8 +448,7 @@ def check_format_collapse(text: str, min_words: int = 5, max_consecutive_repeat:
     if not text:
         return False
 
-    # 【修复1】检测字符重复（如空格、引号等字符的连续重复）
-    # 这是导致模型输出 " " " " " " ... 塌缩的主要原因
+    # 检测字符重复（如空格、引号等字符的连续重复）
     if len(text) > 10:
         # 检测连续重复的字符（空格、引号等）
         consecutive_char_count = 1
@@ -473,7 +464,7 @@ def check_format_collapse(text: str, min_words: int = 5, max_consecutive_repeat:
         if max_char_repeat > 20:
             return True
 
-    # 【修复2】检测单词重复（原有逻辑）
+    # 检测单词重复
     words = text.split()
     if len(words) <= min_words:
         return False
@@ -785,17 +776,16 @@ def compute_stage2_reward_api(
             print(f"[ERROR] compute_stage2_reward_api: {error_msg}", flush=True)
             return {"score": 0.0, "success": False, "error": error_msg}
 
-        # 安全检查：确保客户端有必要的属性（防止热重载导致的版本不一致）
+        # 确保客户端有必要的属性（防止热重载导致的版本不一致）
         if not hasattr(edit_client, 'health_check_timeout'):
             error_msg = f"ImageEditClient missing required attributes. Please restart the training process."
             print(f"[ERROR] compute_stage2_reward_api: {error_msg}", flush=True)
             return {"score": 0.0, "success": False, "error": error_msg}
 
-        # 注意：reward_client 只在 clip/self_reward 模式下需要
+        # reward_client 只在 clip/self_reward 模式下需要
         # 在 sam3 和 mixed 模式下，奖励客户端会在函数内部根据 reward_type 自动创建
-        # 所以这里不检查 reward_client，而是在具体使用时检查
 
-        # 防御性检查：如果edit_prompt为空，直接返回0分（不应该发生，但作为安全措施）
+        # 如果edit_prompt为空，直接返回0分（不应该发生，但作为安全措施）
         edit_prompt_clean = edit_prompt.strip() if edit_prompt else ""
         if not edit_prompt_clean or edit_prompt_clean.lower() in ["remain unchanged", "no edit"]:
             return {
@@ -884,8 +874,6 @@ def compute_stage2_reward_api(
                     category=category,
                     ground_truth=ground_truth,
                 )
-                # compute_reward 成功时返回 {"score": ..., "raw_score": ..., "reward_type": ...}
-                # 失败时会抛出 RuntimeError
                 score = sam3_result.get("score", 0.0)
             except Exception as e:
                 # RewardClient.compute_reward 如果失败会抛出 RuntimeError
@@ -906,15 +894,12 @@ def compute_stage2_reward_api(
                 except (json.JSONDecodeError, TypeError, AttributeError):
                     pass
             else:
-                # 优化：减少日志输出，只在必要时打印
                 pass
 
             if not category:
                 category = "object"
 
             # 根据 REWARD_TYPE_PER_GPU 或默认类型选择基础奖励类型
-            # 注意：当 reward_type == "mixed" 时，base_reward_type 必须是 "clip" 或 "self_reward"
-            # 不能是 "mixed"，因为 CLIP/self-reward 服务不支持 "mixed" 类型
 
             # 优先从 REWARD_TYPE_PER_GPU 获取当前 GPU 对应的奖励类型
             base_reward_type = _get_reward_type_for_current_gpu()
@@ -988,7 +973,6 @@ def compute_stage2_reward_api(
                     sam3_result = f_sam3.result()
                     base_result = f_base.result()
                 except Exception as e:
-                    # 如果线程执行过程中出现异常（不应该发生，但作为防御性检查）
                     return {"score": 0.0, "success": False, "error": f"Thread execution failed: {str(e)}"}
 
             # 检查sam3结果
@@ -1065,7 +1049,6 @@ def compute_stage2_reward_api(
         }
 
     except Exception as e:
-        # 确保错误消息不为空
         error_msg = str(e) if e else "Unknown exception in compute_stage2_reward_api"
         if not error_msg:
             error_msg = "Unknown exception in compute_stage2_reward_api"
@@ -1128,20 +1111,17 @@ def compute_score(
     # 验证奖励类型
     if default_reward_type is not None:
         if default_reward_type not in _SUPPORTED_REWARD_TYPES:
-            # 优化：只在第一次打印，避免重复打印
             if not _client_warning_printed.get("default_reward_type", False):
                 print(f"Warning: 不支持的奖励类型: {default_reward_type}，支持的类型: {_SUPPORTED_REWARD_TYPES}")
                 print(f"  将使用默认值: clip")
                 _client_warning_printed["default_reward_type"] = True
             default_reward_type = None
         else:
-            # 优化：只在第一次打印，避免重复打印
             if not _client_warning_printed.get("default_reward_type", False):
                 print(f"[INFO] 使用外部指定的奖励类型: {default_reward_type}")
                 _client_warning_printed["default_reward_type"] = True
 
     # 初始化客户端
-    # 注意：sam3_client 不需要在这里初始化，因为 compute_stage2_reward_api 会自己初始化
     try:
         edit_client, reward_client, _ = initialize_clients()
     except Exception as e:
@@ -1154,18 +1134,13 @@ def compute_score(
     # 确定max_workers（如果为None，则根据端点数量自动计算）
     if max_workers is None:
         if edit_client is not None and len(edit_client.endpoints) > 0:
-            # 优化：端点数量 × 1（而不是 × 2）
-            # 原因：每个端点处理一个请求需要30-90秒，2倍并发可能导致请求堆积
-            # 32个端点 → max_workers=32，可以充分利用所有端点，避免过度并发
             max_workers = len(edit_client.endpoints)
-            # 优化：只在第一次打印，避免多个worker进程重复打印
             if not _client_warning_printed.get("max_workers", False):
                 print(f"[INFO] 自动设置max_workers={max_workers} (端点数量={len(edit_client.endpoints)})")
                 _client_warning_printed["max_workers"] = True
         else:
             # 如果没有edit_client，使用默认值1
             max_workers = 1
-            # 优化：只在第一次打印，避免多个worker进程重复打印
             if not _client_warning_printed.get("max_workers", False):
                 print(f"[INFO] 未检测到edit_client，使用默认值max_workers=1")
                 _client_warning_printed["max_workers"] = True
@@ -1645,7 +1620,7 @@ def compute_score(
         if tn_count > 0:
             unified_type_counts["TN"] = tn_count
 
-        # 打印总体统计（使用统一命名）
+        # 打印总体统计
         print(f"[INFO] Stage2奖励类型统计 (batch_size={batch_size}): {dict(sorted(unified_type_counts.items(), key=lambda x: x[1], reverse=True))}")
         print(f"[INFO] Stage2奖励类型占比: {', '.join([f'{k}: {v/total*100:.1f}%' for k, v in sorted(unified_type_counts.items(), key=lambda x: x[1], reverse=True)])}")
         print()
