@@ -16,20 +16,22 @@ service:
   sam3_reward_server_base_port: 7001
   
   # Local model paths. Set these in this file or export EDIT_MODEL_PATH /
-  # OMNIVERIFIER_MODEL_PATH before running deploy_services.sh.
+  # SELF_REWARD_MODEL_PATH before running deploy_services.sh.
   edit_model_path: /path/to/BAGEL-7B-MoT
-  omniverifier_model_path: /path/to/OmniVerifier-or-R3-Gen-reward-model
+  self_reward_model_path: /path/to/R3-Gen-self-reward-model
+  # Self-reward backend: omniverifier, qwen2_5vl, or qwen3vl.
+  self_reward_model_type: omniverifier
 
   # SAM3 resources are only required when reward_type includes sam3.
   sam3_bpe_path: /path/to/sam3/bpe_simple_vocab_16e6.txt.gz
   sam3_ckpt_path: /path/to/sam3/sam3.pt
   sam3_metadata_jsonl: ""  # SAM3 metadata JSONL 文件路径（可选）
   
-  # 奖励服务类型：clip 或 omniverifier 或 sam3 或 mixed
-  reward_type: omniverifier
+  # 奖励服务类型：self_reward、clip、sam3 或 mixed
+  reward_type: self_reward
   reward_type_per_gpu: ""
 
-  # 支持 sam3、clip、omniverifier 三种类型
+  # 支持 sam3、clip、self_reward 三种类型
   # reward_type: mixed  # 奖励服务类型
   # reward_type_per_gpu: "0:sam3,1:sam3,2:clip,3:clip"
   
@@ -42,8 +44,8 @@ service:
   # 格式2（按GPU指定）："0:8,1:8,2:4,3:4"
   # instances_per_gpu: "0:4,1:4,2:4,3:16"  # 如果所有GPU相同，可以直接写数字，如 4
   
-  # 图像编辑模型类型：bagel 或 qwen
-  image_edit_model_type: bagel # qwen
+  # 图像编辑模型类型：bagel 或 qwen_image_edit
+  edit_model_type: bagel
   
   # CLIP配置（可选）
   clip_module_path: ""  # 自定义CLIP模块路径（可选，不设置则使用标准clip包）

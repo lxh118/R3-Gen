@@ -14,4 +14,4 @@ fi
 export INSTANCES_PER_GPU="${INSTANCES_PER_GPU:-1}"
 model_path="${EDIT_MODEL_PATH:?Set EDIT_MODEL_PATH to the Qwen-Image-Edit checkpoint directory.}"
 
-bash distributed_services/scripts/deploy_services.sh edit_server "${model_path}" qwen
+bash distributed_services/scripts/deploy_services.sh edit_server "${model_path}" qwen_image_edit

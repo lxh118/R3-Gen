@@ -60,7 +60,7 @@ except ImportError:
 
 # 添加本地bagel_deps路径（代码隔离）
 current_file = os.path.abspath(__file__)
-# distributed_services/servers/bagel_server.py
+# distributed_services/servers/bagel_edit_server.py
 # -> ../bagel_deps
 bagel_deps_dir = os.path.join(os.path.dirname(os.path.dirname(current_file)), "bagel_deps")
 bagel_deps_dir = os.path.abspath(bagel_deps_dir)
@@ -710,4 +710,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -42,10 +42,10 @@ python merge_metadata.py \
 
 ### 2. 在奖励计算中使用 SAM3 奖励
 
-SAM3 奖励已集成到 `omniverifier_staged_reward_api.py` 的 `compute_stage2_reward_api` 函数中。
+SAM3 奖励已集成到 `examples/reward_function/self_reward_staged_reward_api.py` 的 `compute_stage2_reward_api` 函数中。
 
 默认情况下，SAM3 奖励是启用的。如果编辑成功，系统会：
-1. 使用 CLIP/OmniVerifier 计算基础奖励
+1. 使用 CLIP/self_reward 计算基础奖励
 2. 使用 SAM3 计算细粒度奖励
 3. 将两者结合：`最终奖励 = 0.5 * 基础奖励 + 0.5 * SAM3 奖励`
 

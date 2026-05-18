@@ -27,7 +27,7 @@ The default config uses `data.answer_key=ground_truth`, so each item should cont
 - `ground_truth.answer`: boolean label used by the first-stage MLLM judgment reward.
 - `ground_truth.category`: optional task category, such as `object`, `color`, `shape`, `texture`, `spatial`, `numeracy`, `non`, or `complex`.
 - `ground_truth.prompt`: recommended duplicate of the original prompt. It is useful for standalone reward calls and backward compatibility.
-- `ground_truth.reward_type`: optional override for the second-stage reward, for example `omniverifier`, `clip`, `sam3`, or `mixed`.
+- `ground_truth.reward_type`: optional override for the second-stage reward, for example `self_reward`, `clip`, `sam3`, or `mixed`.
 
 For direct MLLM judgment, `answer` is the only required field inside `ground_truth`. In practice, keep `category` and `prompt` too.
 
@@ -43,17 +43,17 @@ For direct MLLM judgment, `answer` is the only required field inside `ground_tru
 
 ## Question Decomposition Reward
 
-The Qwen-VL/OmniVerifier reward servers also accept decomposed yes/no questions. Store them in `ground_truth.generated_qa`:
+The self-reward server also accepts decomposed yes/no questions. Store them in `ground_truth.generated_qa`:
 
 ```json
 {
   "prompt": "a red apple and a green orange",
   "images": ["val/color/02541/false/00002.png"],
-  "ground_truth": "{\"answer\": false, \"category\": \"color\", \"prompt\": \"a red apple and a green orange\", \"reward_type\": \"omniverifier\", \"generated_qa\": {\"yn_question_list\": [\"Is there a red apple in the image?\", \"Is there a green orange in the image?\"]}}"
+  "ground_truth": "{\"answer\": false, \"category\": \"color\", \"prompt\": \"a red apple and a green orange\", \"reward_type\": \"self_reward\", \"generated_qa\": {\"yn_question_list\": [\"Is there a red apple in the image?\", \"Is there a green orange in the image?\"]}}"
 }
 ```
 
-If `generated_qa` is provided, the reward service scores the edited image by the fraction of yes/no questions answered true. This is mainly useful for OmniVerifier/Qwen-VL-style rewards, not CLIP.
+If `generated_qa` is provided, the reward service scores the edited image by the fraction of yes/no questions answered true. This is mainly useful for MLLM self-reward backends, not CLIP.
 
 ## CLIP Reward
 

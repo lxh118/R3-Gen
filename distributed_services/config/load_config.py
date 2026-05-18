@@ -77,7 +77,8 @@ def get_env_vars(config):
     
     # 模型路径配置
     env_vars["EDIT_MODEL_PATH"] = service.get("edit_model_path", "")
-    env_vars["OMNIVERIFIER_MODEL_PATH"] = service.get("omniverifier_model_path", "")
+    env_vars["SELF_REWARD_MODEL_PATH"] = service.get("self_reward_model_path", "")
+    env_vars["SELF_REWARD_MODEL_TYPE"] = service.get("self_reward_model_type", "omniverifier")
     
     # SAM3 模型资源路径
     env_vars["SAM3_BPE_PATH"] = service.get("sam3_bpe_path", "")
@@ -85,7 +86,7 @@ def get_env_vars(config):
     env_vars["SAM3_METADATA_JSONL"] = service.get("sam3_metadata_jsonl", "")
 
     # 奖励服务配置
-    env_vars["REWARD_TYPE"] = service.get("reward_type", "omniverifier")
+    env_vars["REWARD_TYPE"] = service.get("reward_type", "self_reward")
     env_vars["REWARD_TYPE_PER_GPU"] = service.get("reward_type_per_gpu", "")
 
     # GPU配置
@@ -102,7 +103,7 @@ def get_env_vars(config):
     env_vars["INSTANCES_PER_GPU"] = str(instances_per_gpu) if isinstance(instances_per_gpu, (int, float)) else instances_per_gpu
     
     # 图像编辑模型配置
-    env_vars["IMAGE_EDIT_MODEL_TYPE"] = service.get("image_edit_model_type", "bagel")
+    env_vars["EDIT_MODEL_TYPE"] = service.get("edit_model_type", "bagel")
     
     # CLIP配置
     env_vars["CLIP_MODULE_PATH"] = service.get("clip_module_path", "")

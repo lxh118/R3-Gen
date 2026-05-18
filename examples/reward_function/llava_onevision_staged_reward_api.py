@@ -5,4 +5,4 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 if CURRENT_DIR not in sys.path:
     sys.path.insert(0, CURRENT_DIR)
 
-from qwen3vl_staged_reward_api2 import compute_score
+from self_reward_staged_reward_api_llava import compute_score

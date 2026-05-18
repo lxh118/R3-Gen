@@ -21,12 +21,12 @@ save_checkpoint_path="${SAVE_CHECKPOINT_PATH:-checkpoints/${project_name}/${expe
 config_file="${CONFIG_FILE:-distributed_services/config/config.yaml}"
 verl_base_config_rel="${VERL_BASE_CONFIG:-distributed_services/config/verl_config.yaml}"
 format_prompt="${FORMAT_PROMPT:-examples/format_prompt/qwen3_vl_edit_optimized.jinja}"
-reward_function="${REWARD_FUNCTION:-examples/reward_function/qwen3vl_staged_reward_api.py:compute_score}"
+reward_function="${REWARD_FUNCTION:-examples/reward_function/self_reward_staged_reward_api.py:compute_score}"
 
 if [[ -n "${REWARD_KWARGS:-}" ]]; then
     reward_kwargs="${REWARD_KWARGS}"
 else
-    reward_kwargs="{\"think_format_weight\":0.1,\"json_format_weight\":0.05,\"stage1_weight\":0.2,\"stage2_weight\":0.8,\"image_dir\":\"${image_dir}\",\"default_reward_type\":\"omniverifier\",\"enable_stage2\":true}"
+    reward_kwargs="{\"think_format_weight\":0.1,\"json_format_weight\":0.05,\"stage1_weight\":0.2,\"stage2_weight\":0.8,\"image_dir\":\"${image_dir}\",\"default_reward_type\":\"self_reward\",\"enable_stage2\":true}"
 fi
 
 rollout_batch_size="${ROLLOUT_BATCH_SIZE:-128}"

@@ -26,7 +26,7 @@ reward_function="${REWARD_FUNCTION:-examples/reward_function/llava_onevision_sta
 if [[ -n "${REWARD_KWARGS:-}" ]]; then
     reward_kwargs="${REWARD_KWARGS}"
 else
-    reward_kwargs="{\"think_format_weight\":0.1,\"json_format_weight\":0.05,\"stage1_weight\":0.2,\"stage2_weight\":0.8,\"image_dir\":\"${image_dir}\",\"default_reward_type\":\"omniverifier\",\"enable_stage2\":true}"
+    reward_kwargs="{\"think_format_weight\":0.1,\"json_format_weight\":0.05,\"stage1_weight\":0.2,\"stage2_weight\":0.8,\"image_dir\":\"${image_dir}\",\"default_reward_type\":\"self_reward\",\"enable_stage2\":true}"
 fi
 
 rollout_batch_size="${ROLLOUT_BATCH_SIZE:-128}"

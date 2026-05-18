@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-OmniVerifier奖励服务 - 使用OmniVerifier-7B模型进行奖励计算
-支持多GPU负载均衡
+R3-Gen self-reward service with a Qwen2.5-VL backend.
 """
 
 import argparse
@@ -17,37 +16,40 @@ import torch
 from flask import Flask, request, jsonify
 from PIL import Image
 
-# 导入OmniVerifier模型
+# 导入Qwen2.5-VL模型
 try:
     from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
     from qwen_vl_utils import process_vision_info
-    OMNIVERIFIER_AVAILABLE = True
+    QWEN2_5VL_AVAILABLE = True
 except ImportError:
-    OMNIVERIFIER_AVAILABLE = False
-    print("Warning: OmniVerifier dependencies not available. Please install transformers and qwen-vl-utils")
+    QWEN2_5VL_AVAILABLE = False
+    print("Warning: Qwen2.5-VL dependencies not available. Please install transformers and qwen-vl-utils")
 
 app = Flask(__name__)
 
 # 全局模型变量
-OMNIVERIFIER_MODEL = None
-OMNIVERIFIER_PROCESSOR = None
+QWEN2_5VL_MODEL = None
+QWEN2_5VL_PROCESSOR = None
 DEVICE = None
 
+def normalize_reward_type(reward_type: str | None) -> str:
+    return (reward_type or "self_reward").strip().lower().replace("-", "_")
 
-def load_omniverifier_model(model_path: str, device: torch.device):
-    """加载OmniVerifier模型"""
-    global OMNIVERIFIER_MODEL, OMNIVERIFIER_PROCESSOR
+
+def load_qwen2_5vl_model(model_path: str, device: torch.device):
+    """加载Qwen2.5-VL模型"""
+    global QWEN2_5VL_MODEL, QWEN2_5VL_PROCESSOR
     
-    if not OMNIVERIFIER_AVAILABLE:
-        raise RuntimeError("OmniVerifier dependencies not available. Please install transformers and qwen-vl-utils")
+    if not QWEN2_5VL_AVAILABLE:
+        raise RuntimeError("Qwen2.5-VL dependencies not available. Please install transformers and qwen-vl-utils")
     
-    print(f"Loading OmniVerifier model from {model_path}...")
+    print(f"Loading Qwen2.5-VL model from {model_path}...")
     
     try:
         # 加载模型（使用bfloat16精度，明确指定单个设备，避免多GPU分布）
         # 不使用device_map="auto"，因为它会将模型分布到多个GPU，导致设备不匹配错误
         # 直接加载到CPU，然后手动移动到指定设备，这样更可控
-        OMNIVERIFIER_MODEL = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+        QWEN2_5VL_MODEL = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             model_path,
             dtype=torch.bfloat16,
             device_map=None,  # 不使用自动设备映射
@@ -55,38 +57,38 @@ def load_omniverifier_model(model_path: str, device: torch.device):
         )
         
         # 手动移动到指定设备（确保整个模型在同一个设备上）
-        OMNIVERIFIER_MODEL = OMNIVERIFIER_MODEL.to(device)
+        QWEN2_5VL_MODEL = QWEN2_5VL_MODEL.to(device)
         
         # 加载processor
-        OMNIVERIFIER_PROCESSOR = AutoProcessor.from_pretrained(
+        QWEN2_5VL_PROCESSOR = AutoProcessor.from_pretrained(
             model_path,
             trust_remote_code=True
         )
         
-        print(f"✅ OmniVerifier model loaded successfully")
+        print(f"✅ Qwen2.5-VL model loaded successfully")
         print(f"   Model path: {model_path}")
         print(f"   Device: {device}")
-        print(f"   Model dtype: {OMNIVERIFIER_MODEL.dtype if hasattr(OMNIVERIFIER_MODEL, 'dtype') else 'N/A'}")
+        print(f"   Model dtype: {QWEN2_5VL_MODEL.dtype if hasattr(QWEN2_5VL_MODEL, 'dtype') else 'N/A'}")
         
     except Exception as e:
-        raise RuntimeError(f"Failed to load OmniVerifier model: {e}")
+        raise RuntimeError(f"Failed to load Qwen2.5-VL model: {e}")
 
 
 def build_verification_prompt(original_prompt: str) -> str:
     """构建验证prompt"""
     question = f"""This image was generated from the prompt: {original_prompt}. 
-    Please carefully analyze the image and determine whether all the objects, attributes, count, and spatial relationships mentioned in the prompt are correctly represented in the image. 
+    Please carefully analyze the image and determine whether all the objects, attributes(colors, shapes, textures, sizes), count, and spatial relationships mentioned in the prompt are correctly represented in the image. 
 
     If the image accurately reflects the prompt, please answer 'true'; otherwise, answer 'false'.  
 
     Respond strictly in the following JSON format: 
 
     {{
-        "answer": true/false,
-        "explanation": "If the answer is false, briefly summarize the main error.",
+    "answer": true/false,
+    "explanation": "A brief, specific description of the main error(s) (if answer is false).",
     }}
 
- You should first think about the reasoning process in your mind and then provide the user with the answer. The reasoning process is enclosed within <think> </think> tags, i.e. <think> reasoning process here </think> answer here"""
+ You should first think about the reasoning process in your mind and then provide the user with the answer. The reasoning process is enclosed within <thinking> </thinking> tags, i.e. <thinking> reasoning process here </thinking> answer here"""
 
     return question
 
@@ -95,35 +97,31 @@ def build_question_prompt(question: str) -> str:
     """构建单个问题的验证prompt"""
     prompt = f"""Please carefully analyze the image and answer the following question: {question}
 
-    If the image accurately reflects the prompt, please answer 'true'; otherwise, answer 'false'. 
-
     Respond strictly in the following JSON format:
 
     {{
         "answer": true/false,
         "explanation": "Brief explanation of your answer.",
     }}
-
-You should first think about the reasoning process in your mind and then provide the user with the answer. The reasoning process is enclosed within <think> </think> tags, i.e. <think> reasoning process here </think> answer here"""
-
+    """
     return prompt
 
 
 # def filter_thinking_part(response: str, eos_token=None) -> tuple[str, bool]:
 #     """
-#     提取answer部分（去除think标签）
+#     提取answer部分（去除thinking标签）
     
 #     支持两种格式：
-#     1. 标准格式：<think>think内容</think>answer
-#     2. 只有结束标签：think内容</think>answer（模型偏好格式）
+#     1. 标准格式：<thinking>think内容</thinking>answer
+#     2. 只有结束标签：think内容</thinking>answer（模型偏好格式）
     
 #     Returns:
 #         (filtered_response: str, success: bool)
 #     """
 #     response_start = 0
 #     success = False
-#     think_tag_start = '<think>'
-#     think_tag_end = '</think>'
+#     think_tag_start = '<thinking>'
+#     think_tag_end = '</thinking>'
     
 #     # 查找结束标签（从后往前找最后一个）
 #     think_end = response.rfind(think_tag_end)
@@ -151,6 +149,64 @@ You should first think about the reasoning process in your mind and then provide
 #         response_end = len(response)
 #     response = response[response_start:response_end]
 #     return response, success
+
+# def clean_json_markdown(text: str) -> str:
+#     """清洗 markdown json 格式"""
+#     text = text.strip()
+#     if text.startswith("```json"):
+#         text = text[7:].strip()
+#     elif text.startswith("```"):
+#         text = text[3:].strip()
+#     if text.endswith("```"):
+#         text = text[:-3].strip()
+#     return text
+
+
+# def extract_answer_from_response(response_text: str) -> tuple[bool, str]:
+#     """
+#     从模型响应中提取answer（支持thinking标签和更鲁棒的JSON提取）
+    
+#     Returns:
+#         (answer: bool, explanation: str)
+#     """
+#     try:
+#         # 1. 提取 <thinking> 之后的内容
+#         response_clean, has_think = filter_thinking_part(response_text)
+        
+#         # 2. 清洗 Markdown (```json ... ```)
+#         response_clean = clean_json_markdown(response_clean)
+        
+#         # 3. 尝试直接 JSON 解析
+#         try:
+#             response_json = json.loads(response_clean)
+#             if isinstance(response_json, dict):
+#                 # 兼容大小写 (True/False/true/false)
+#                 ans_val = response_json.get("answer")
+#                 if isinstance(ans_val, str):
+#                     answer = ans_val.lower() == "true"
+#                 else:
+#                     answer = bool(ans_val)
+                    
+#                 explanation = response_json.get("explanation", "")
+#                 return answer, explanation
+#         except:
+#             pass
+        
+#         # 4. 如果 JSON 解析失败，尝试正则兜底 (Regex Fallback)
+#         # 查找 "answer": true/false
+#         answer_match = re.search(r'"answer"\s*:\s*(true|false)', response_clean, re.IGNORECASE)
+#         if answer_match:
+#             answer = answer_match.group(1).lower() == "true"
+            
+#             # 尝试提取 explanation
+#             exp_match = re.search(r'"explanation"\s*:\s*"(.*?)"', response_clean, re.DOTALL)
+#             explanation = exp_match.group(1) if exp_match else ""
+#             return answer, explanation
+            
+#         return False, "Failed to parse response"
+        
+#     except Exception as e:
+#         return False, f"Exception: {str(e)}"
 
 def find_first_json_block(text: str) -> str | None:
     """
@@ -226,120 +282,16 @@ def extract_answer_from_response(response_text: str) -> tuple[bool, str]:
             return answer, explanation
             
         # 3. 终极兜底：直接找单词 "true" 或 "false" (仅在非常绝望时使用，容易误判，可选)
-        # 考虑到 OmniVerifier 的 Prompt 强约束了 JSON，通常不需要这一步
+        # 考虑到 Qwen2.5-VL 的 Prompt 强约束了 JSON，通常不需要这一步
         
         return False, "Failed to parse response"
         
     except Exception as e:
         return False, f"Exception in parsing: {str(e)}"
 
-# def extract_answer_from_response(response_text: str) -> tuple[bool, str]:
-#     """
-#     从模型响应中提取answer（支持think标签和更鲁棒的JSON提取）
-    
-#     策略：
-#     1. 先从 `</think>` 之后提取JSON（标准位置）
-#     2. 如果失败，尝试从整个响应中查找JSON块
-#     3. 如果还失败，尝试从think内容中提取JSON
-#     4. 最后尝试正则表达式提取
-    
-#     Returns:
-#         (answer: bool, explanation: str)
-#     """
-#     try:
-#         # 策略1：尝试从 `</think>` 之后提取JSON（标准位置）
-#         response_clean, has_think_tag = filter_thinking_part(response_text)
-        
-#         # 尝试解析JSON
-#         try:
-#             response_json = json.loads(response_clean.strip())
-#             if isinstance(response_json, dict):
-#                 answer = response_json.get("answer", False)
-#                 explanation = response_json.get("explanation", "")
-#                 return bool(answer), explanation
-#         except (json.JSONDecodeError, ValueError, TypeError):
-#             pass
-        
-#         # 策略2：如果策略1失败，尝试从整个响应中查找JSON块
-#         # 查找JSON的开始和结束位置（使用大括号匹配）
-#         json_start = response_text.find('{')
-#         if json_start != -1:
-#             # 从第一个 { 开始，尝试找到匹配的 }
-#             brace_count = 0
-#             json_end = -1
-#             for i in range(json_start, len(response_text)):
-#                 if response_text[i] == '{':
-#                     brace_count += 1
-#                 elif response_text[i] == '}':
-#                     brace_count -= 1
-#                     if brace_count == 0:
-#                         json_end = i + 1
-#                         break
-            
-#             if json_end != -1:
-#                 try:
-#                     json_str = response_text[json_start:json_end]
-#                     response_json = json.loads(json_str)
-#                     if isinstance(response_json, dict):
-#                         answer = response_json.get("answer", False)
-#                         explanation = response_json.get("explanation", "")
-#                         return bool(answer), explanation
-#                 except (json.JSONDecodeError, ValueError, TypeError):
-#                     pass
-        
-#         # 策略3：如果策略2也失败，尝试从think内容中提取JSON
-#         # 查找think内容（在 `</think>` 之前）
-#         think_tag_end = '</think>'
-#         think_end = response_text.rfind(think_tag_end)
-#         if think_end != -1:
-#             think_content = response_text[:think_end]
-#             # 在think内容中查找JSON
-#             json_start = think_content.find('{')
-#             if json_start != -1:
-#                 brace_count = 0
-#                 json_end = -1
-#                 for i in range(json_start, len(think_content)):
-#                     if think_content[i] == '{':
-#                         brace_count += 1
-#                     elif think_content[i] == '}':
-#                         brace_count -= 1
-#                         if brace_count == 0:
-#                             json_end = i + 1
-#                             break
-                
-#                 if json_end != -1:
-#                     try:
-#                         json_str = think_content[json_start:json_end]
-#                         response_json = json.loads(json_str)
-#                         if isinstance(response_json, dict):
-#                             answer = response_json.get("answer", False)
-#                             explanation = response_json.get("explanation", "")
-#                             return bool(answer), explanation
-#                     except (json.JSONDecodeError, ValueError, TypeError):
-#                         pass
-        
-#         # 策略4：最后尝试正则表达式提取（兜底方案）
-#         answer_match = re.search(r'"answer"\s*:\s*(true|false)', response_text, re.IGNORECASE)
-#         if answer_match:
-#             answer_str = answer_match.group(1).lower()
-#             answer = answer_str == "true"
-            
-#             # 尝试提取explanation
-#             explanation_match = re.search(r'"explanation"\s*:\s*"([^"]*)"', response_text, re.IGNORECASE)
-#             explanation = explanation_match.group(1) if explanation_match else ""
-            
-#             return answer, explanation
-        
-#         # 如果所有策略都失败了，返回False
-#         return False, "Failed to parse response"
-        
-#     except Exception as e:
-#         return False, f"Exception in parsing: {str(e)}"
-
-
-def compute_omniverifier_score(image: Image.Image, prompt: str) -> float:
+def compute_qwen2_5vl_score(image: Image.Image, prompt: str) -> float:
     """
-    使用OmniVerifier模型计算奖励分数
+    使用Qwen2.5-VL模型计算奖励分数
     
     Args:
         image: PIL图像
@@ -348,10 +300,10 @@ def compute_omniverifier_score(image: Image.Image, prompt: str) -> float:
     Returns:
         奖励分数：如果answer为true返回1.0，否则返回0.0
     """
-    global OMNIVERIFIER_MODEL, OMNIVERIFIER_PROCESSOR, DEVICE
+    global QWEN2_5VL_MODEL, QWEN2_5VL_PROCESSOR, DEVICE
     
-    if OMNIVERIFIER_MODEL is None or OMNIVERIFIER_PROCESSOR is None:
-        raise RuntimeError("OmniVerifier model not loaded")
+    if QWEN2_5VL_MODEL is None or QWEN2_5VL_PROCESSOR is None:
+        raise RuntimeError("Qwen2.5-VL model not loaded")
     
     try:
         # 构建验证prompt
@@ -372,11 +324,11 @@ def compute_omniverifier_score(image: Image.Image, prompt: str) -> float:
         ]
         
         # 准备输入
-        text = OMNIVERIFIER_PROCESSOR.apply_chat_template(
+        text = QWEN2_5VL_PROCESSOR.apply_chat_template(
             messages, tokenize=False, add_generation_prompt=True
         )
         image_inputs, video_inputs = process_vision_info(messages)
-        inputs = OMNIVERIFIER_PROCESSOR(
+        inputs = QWEN2_5VL_PROCESSOR(
             text=[text],
             images=image_inputs,
             videos=video_inputs,
@@ -388,11 +340,11 @@ def compute_omniverifier_score(image: Image.Image, prompt: str) -> float:
         # 优先使用全局DEVICE变量（启动时指定的设备）
         if DEVICE is not None:
             target_device = DEVICE
-        elif hasattr(OMNIVERIFIER_MODEL, "device"):
-            target_device = OMNIVERIFIER_MODEL.device
+        elif hasattr(QWEN2_5VL_MODEL, "device"):
+            target_device = QWEN2_5VL_MODEL.device
         else:
             # 获取模型第一个参数所在的设备
-            target_device = next(OMNIVERIFIER_MODEL.parameters()).device
+            target_device = next(QWEN2_5VL_MODEL.parameters()).device
         
         # 确保所有输入都在同一个设备上
         inputs = {k: v.to(target_device) if isinstance(v, torch.Tensor) else v 
@@ -400,11 +352,11 @@ def compute_omniverifier_score(image: Image.Image, prompt: str) -> float:
         
         # 推理（增加max_new_tokens以容纳think标签内容）
         with torch.no_grad():
-            generated_ids = OMNIVERIFIER_MODEL.generate(**inputs, max_new_tokens=1024, do_sample=False)
+            generated_ids = QWEN2_5VL_MODEL.generate(**inputs, max_new_tokens=512, do_sample=False)
             generated_ids_trimmed = [
                 out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs['input_ids'], generated_ids)
             ]
-            output_text = OMNIVERIFIER_PROCESSOR.batch_decode(
+            output_text = QWEN2_5VL_PROCESSOR.batch_decode(
                 generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
             )
         
@@ -414,17 +366,17 @@ def compute_omniverifier_score(image: Image.Image, prompt: str) -> float:
         
         # 返回分数：true=1.0, false=0.0
         score = 1.0 if answer else 0.0
-            
+        
         return score
         
     except Exception as e:
-        print(f"Error computing OmniVerifier score: {e}", flush=True)
+        print(f"Error computing Qwen2.5-VL score: {e}", flush=True)
         raise
 
 
-def compute_omniverifier_score_with_qa(image: Image.Image, yn_question_list: list[str]) -> float:
+def compute_qwen2_5vl_score_with_qa(image: Image.Image, yn_question_list: list[str]) -> float:
     """
-    使用OmniVerifier模型基于多个问题计算奖励分数
+    使用Qwen2.5-VL模型基于多个问题计算奖励分数
     
     Args:
         image: PIL图像
@@ -433,10 +385,10 @@ def compute_omniverifier_score_with_qa(image: Image.Image, yn_question_list: lis
     Returns:
         奖励分数：正确答案数 / 总问题数，范围 [0.0, 1.0]
     """
-    global OMNIVERIFIER_MODEL, OMNIVERIFIER_PROCESSOR, DEVICE
+    global QWEN2_5VL_MODEL, QWEN2_5VL_PROCESSOR, DEVICE
     
-    if OMNIVERIFIER_MODEL is None or OMNIVERIFIER_PROCESSOR is None:
-        raise RuntimeError("OmniVerifier model not loaded")
+    if QWEN2_5VL_MODEL is None or QWEN2_5VL_PROCESSOR is None:
+        raise RuntimeError("Qwen2.5-VL model not loaded")
     
     if not yn_question_list:
         return 0.0
@@ -465,11 +417,11 @@ def compute_omniverifier_score_with_qa(image: Image.Image, yn_question_list: lis
             ]
             
             # 准备输入
-            text = OMNIVERIFIER_PROCESSOR.apply_chat_template(
+            text = QWEN2_5VL_PROCESSOR.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True
             )
             image_inputs, video_inputs = process_vision_info(messages)
-            inputs = OMNIVERIFIER_PROCESSOR(
+            inputs = QWEN2_5VL_PROCESSOR(
                 text=[text],
                 images=image_inputs,
                 videos=video_inputs,
@@ -480,10 +432,10 @@ def compute_omniverifier_score_with_qa(image: Image.Image, yn_question_list: lis
             # 移动到正确的设备
             if DEVICE is not None:
                 target_device = DEVICE
-            elif hasattr(OMNIVERIFIER_MODEL, "device"):
-                target_device = OMNIVERIFIER_MODEL.device
+            elif hasattr(QWEN2_5VL_MODEL, "device"):
+                target_device = QWEN2_5VL_MODEL.device
             else:
-                target_device = next(OMNIVERIFIER_MODEL.parameters()).device
+                target_device = next(QWEN2_5VL_MODEL.parameters()).device
             
             # 确保所有输入都在同一个设备上
             inputs = {k: v.to(target_device) if isinstance(v, torch.Tensor) else v 
@@ -491,11 +443,11 @@ def compute_omniverifier_score_with_qa(image: Image.Image, yn_question_list: lis
             
             # 推理（增加max_new_tokens以容纳think标签内容）
             with torch.no_grad():
-                generated_ids = OMNIVERIFIER_MODEL.generate(**inputs, max_new_tokens=512,do_sample=False)
+                generated_ids = QWEN2_5VL_MODEL.generate(**inputs, max_new_tokens=512,do_sample=False)
                 generated_ids_trimmed = [
                     out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs['input_ids'], generated_ids)
                 ]
-                output_text = OMNIVERIFIER_PROCESSOR.batch_decode(
+                output_text = QWEN2_5VL_PROCESSOR.batch_decode(
                     generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
                 )
             
@@ -513,7 +465,7 @@ def compute_omniverifier_score_with_qa(image: Image.Image, yn_question_list: lis
         return score
         
     except Exception as e:
-        print(f"Error computing OmniVerifier score with QA: {e}", flush=True)
+        print(f"Error computing Qwen2.5-VL score with QA: {e}", flush=True)
         raise
 
 
@@ -522,8 +474,10 @@ def health_check():
     """健康检查端点"""
     return jsonify({
         "status": "healthy",
-        "model_loaded": OMNIVERIFIER_MODEL is not None,
-        "processor_loaded": OMNIVERIFIER_PROCESSOR is not None,
+        "reward_type": "self_reward",
+        "self_reward_model_type": "qwen2_5vl",
+        "model_loaded": QWEN2_5VL_MODEL is not None,
+        "processor_loaded": QWEN2_5VL_PROCESSOR is not None,
     })
 
 
@@ -536,7 +490,7 @@ def compute_reward_endpoint():
     {
         "image": "base64编码的图像",
         "prompt": "文本提示",
-        "reward_type": "omniverifier",  # 当前只支持omniverifier
+        "reward_type": "self_reward",
         "generated_qa": {  # 可选，如果提供则使用多问题模式
             "yn_question_list": ["Is there a cup in the image?", "Is the cup red in color?"]
         }
@@ -547,7 +501,7 @@ def compute_reward_endpoint():
         "success": true,
         "score": 1.0,  # 如果使用generated_qa，则为正确答案数/总问题数；否则1.0表示true，0.0表示false
         "raw_score": 1.0,
-        "reward_type": "omniverifier",
+        "reward_type": "self_reward",
         "error": null
     }
     """
@@ -559,7 +513,7 @@ def compute_reward_endpoint():
         # 解析输入
         image_b64 = data.get("image")
         prompt = data.get("prompt")
-        reward_type = data.get("reward_type", "omniverifier")
+        reward_type = normalize_reward_type(data.get("reward_type", "self_reward"))
         generated_qa = data.get("generated_qa")  # 新增：支持generated_qa字段
         
         # 确保generated_qa是dict类型（如果是从JSON反序列化的）
@@ -594,18 +548,18 @@ def compute_reward_endpoint():
                 "error": "Missing required field: prompt (or generated_qa)"
             }), 400
         
-        if reward_type != "omniverifier":
+        if reward_type != "self_reward":
             return jsonify({
                 "success": False,
                 "score": 0.0,
-                "error": f"Unsupported reward type: {reward_type}. Only 'omniverifier' is supported."
+                "error": f"Unsupported reward type: {reward_type}. Only 'self_reward' is supported."
             }), 400
         
         # 解码图像
         image_bytes = base64.b64decode(image_b64)
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         
-        # 计算OmniVerifier分数
+        # 计算Qwen2.5-VL分数
         if has_qa:
             # 使用多问题模式
             yn_question_list = generated_qa.get("yn_question_list", [])
@@ -630,10 +584,10 @@ def compute_reward_endpoint():
                     "score": 0.0,
                     "error": "generated_qa.yn_question_list contains no valid questions"
                 }), 400
-            score = compute_omniverifier_score_with_qa(image, yn_question_list)
+            score = compute_qwen2_5vl_score_with_qa(image, yn_question_list)
         else:
             # 使用原始单prompt模式
-            score = compute_omniverifier_score(image, prompt)
+            score = compute_qwen2_5vl_score(image, prompt)
         
         # 记录响应信息
         print(f"[RESPONSE] Success | score={score:.4f}, mode={'qa' if has_qa else 'prompt'}", flush=True)
@@ -642,7 +596,7 @@ def compute_reward_endpoint():
             "success": True,
             "score": score,
             "raw_score": score,
-            "reward_type": "omniverifier",
+            "reward_type": "self_reward",
             "error": None
         })
         
@@ -656,8 +610,8 @@ def compute_reward_endpoint():
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="OmniVerifier奖励服务")
-    parser.add_argument("--model_path", type=str, required=True, help="OmniVerifier模型路径")
+    parser = argparse.ArgumentParser(description="Qwen2.5-VL奖励服务")
+    parser.add_argument("--model_path", type=str, required=True, help="Qwen2.5-VL模型路径")
     parser.add_argument("--port", type=int, default=5002, help="服务端口")
     parser.add_argument("--host", type=str, default="0.0.0.0", help="服务host")
     parser.add_argument("--device", type=int, default=0, help="GPU设备ID")
@@ -684,10 +638,10 @@ def main():
     DEVICE = device
     
     # 加载模型
-    load_omniverifier_model(args.model_path, device)
+    load_qwen2_5vl_model(args.model_path, device)
     
     # 启动服务
-    print(f"🚀 Starting OmniVerifier reward server on {args.host}:{args.port}")
+    print(f"🚀 Starting Qwen2.5-VL reward server on {args.host}:{args.port}")
     print(f"   Model path: {args.model_path}")
     print(f"   Device: {device}")
     
@@ -707,4 +661,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

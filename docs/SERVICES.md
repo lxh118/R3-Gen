@@ -10,9 +10,9 @@ The training process reads these variables directly or through `distributed_serv
 export EDIT_SERVER_ENDPOINTS="http://edit-node:5001,http://edit-node:5003"
 export REWARD_SERVER_ENDPOINTS="http://reward-node:6001,http://reward-node:6002"
 export CLIP_REWARD_SERVER_ENDPOINTS=""
-export OMNIVERIFIER_REWARD_SERVER_ENDPOINTS="http://reward-node:6001"
+export SELF_REWARD_SERVER_ENDPOINTS="http://reward-node:6001"
 export SAM3_REWARD_SERVER_ENDPOINTS=""
-export REWARD_TYPE="omniverifier"
+export REWARD_TYPE="self_reward"
 export REWARD_TYPE_PER_GPU=""
 ```
 
@@ -31,20 +31,23 @@ Qwen Image Edit:
 
 ```bash
 export EDIT_MODEL_PATH=/path/to/Qwen-Image-Edit
-bash distributed_services/scripts/deploy_services.sh edit_server "$EDIT_MODEL_PATH" qwen
+bash distributed_services/scripts/deploy_services.sh edit_server "$EDIT_MODEL_PATH" qwen_image_edit
 ```
 
 The image-edit client calls `/edit` and expects a base64 PNG response.
 
 ## Reward Services
 
-OmniVerifier/R3-Gen reward:
+R3-Gen self-reward:
 
 ```bash
-export OMNIVERIFIER_MODEL_PATH=/path/to/reward_model
-export REWARD_TYPE=omniverifier
+export SELF_REWARD_MODEL_PATH=/path/to/self_reward_model
+export SELF_REWARD_MODEL_TYPE=qwen3vl  # omniverifier, qwen2_5vl, or qwen3vl
+export REWARD_TYPE=self_reward
 bash distributed_services/scripts/deploy_services.sh reward_server
 ```
+
+Use `REWARD_TYPE=self_reward` for the paper method. `SELF_REWARD_MODEL_TYPE` only selects the server backend; it should not be used as the reward type.
 
 CLIP reward:
 
@@ -67,7 +70,7 @@ Mixed reward assignment can be controlled with `REWARD_TYPE_PER_GPU`, for exampl
 
 ```bash
 export REWARD_TYPE=mixed
-export REWARD_TYPE_PER_GPU="0:omniverifier,1:omniverifier,2:clip,3:sam3"
+export REWARD_TYPE_PER_GPU="0:self_reward,1:self_reward,2:clip,3:sam3"
 ```
 
 ## Training Node

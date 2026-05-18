@@ -12,7 +12,7 @@ data:
   val_batch_size: 1024
   val_max_samples: null  # 限制验证集最大样本数，null表示使用全部数据。例如：200表示只使用200条验证数据
   val_filter_overlong_prompts: false
-  format_prompt: examples/format_prompt/omniverifier_with_edit_optimized.jinja
+  format_prompt: examples/format_prompt/qwen3_vl_edit_optimized.jinja
   override_chat_template: null
   shuffle: true
   seed: 1
@@ -99,7 +99,7 @@ trainer:
   total_epochs: 20
   max_steps: null
   project_name: easy_r1
-  experiment_name: qwen2_5_7b_math_grpo
+  experiment_name: r3_gen_grpo
   logger: ["console", "wandb"]
   nnodes: 1
   n_gpus_per_node: 8

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-Qwen3-VL奖励服务 - 使用Qwen3-VL模型进行奖励计算
-支持多GPU负载均衡
+R3-Gen self-reward service with a Qwen3-VL backend.
 """
 
 import argparse
@@ -31,6 +30,9 @@ app = Flask(__name__)
 QWEN3VL_MODEL = None
 QWEN3VL_PROCESSOR = None
 DEVICE = None
+
+def normalize_reward_type(reward_type: str | None) -> str:
+    return (reward_type or "self_reward").strip().lower().replace("-", "_")
 
 
 def load_qwen3vl_model(model_path: str, device: torch.device):
@@ -77,7 +79,7 @@ def load_qwen3vl_model(model_path: str, device: torch.device):
 
 
 # def build_verification_prompt(original_prompt: str) -> str:
-#     """构建验证prompt - 使用训练时的模板（omniverifier_with_edit.jinja）"""
+#     """构建验证prompt - 使用训练时的编辑验证模板"""
 #     question = f"""This image was generated from the prompt: {original_prompt}. Please carefully analyze the image and determine whether all the objects, attributes, and spatial relationships mentioned in the prompt are correctly represented in the image.
 
 # If the image accurately reflects the prompt, please answer 'true'; otherwise, answer 'false'.
@@ -395,6 +397,8 @@ def health_check():
     """健康检查端点"""
     return jsonify({
         "status": "healthy",
+        "reward_type": "self_reward",
+        "self_reward_model_type": "qwen3vl",
         "model_loaded": QWEN3VL_MODEL is not None,
         "processor_loaded": QWEN3VL_PROCESSOR is not None,
     })
@@ -409,7 +413,7 @@ def compute_reward_endpoint():
     {
         "image": "base64编码的图像",
         "prompt": "文本提示",
-        "reward_type": "qwen3vl",  # 当前只支持qwen3vl（向后兼容omniverifier）
+        "reward_type": "self_reward",
         "generated_qa": {  # 可选，如果提供则使用多问题模式
             "yn_question_list": ["Is there a cup in the image?", "Is the cup red in color?"]
         }
@@ -420,7 +424,7 @@ def compute_reward_endpoint():
         "success": true,
         "score": 1.0,  # 如果使用generated_qa，则为正确答案数/总问题数；否则1.0表示true，0.0表示false
         "raw_score": 1.0,
-        "reward_type": "qwen3vl",
+        "reward_type": "self_reward",
         "error": null
     }
     """
@@ -432,7 +436,7 @@ def compute_reward_endpoint():
         # 解析输入
         image_b64 = data.get("image")
         prompt = data.get("prompt")
-        reward_type = data.get("reward_type", "qwen3vl")
+        reward_type = normalize_reward_type(data.get("reward_type", "self_reward"))
         generated_qa = data.get("generated_qa")  # 新增：支持generated_qa字段
         
         # 确保generated_qa是dict类型（如果是从JSON反序列化的）
@@ -467,11 +471,11 @@ def compute_reward_endpoint():
                 "error": "Missing required field: prompt (or generated_qa)"
             }), 400
         
-        if reward_type not in ["qwen3vl", "omniverifier"]:  # 保持向后兼容
+        if reward_type != "self_reward":
             return jsonify({
                 "success": False,
                 "score": 0.0,
-                "error": f"Unsupported reward type: {reward_type}. Only 'qwen3vl' is supported."
+                "error": f"Unsupported reward type: {reward_type}. Only 'self_reward' is supported."
             }), 400
         
         # 解码图像
@@ -515,7 +519,7 @@ def compute_reward_endpoint():
             "success": True,
             "score": score,
             "raw_score": score,
-            "reward_type": "qwen3vl",
+            "reward_type": "self_reward",
             "error": None
         })
         
@@ -580,4 +584,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -596,23 +596,23 @@ class ServiceClient:
 
 
 class ImageEditClient(ServiceClient):
-    """图像编辑服务客户端（支持BAGEL和Qwen）"""
+    """图像编辑服务客户端（支持BAGEL和Qwen-Image-Edit）"""
 
     def __init__(self, *args, **kwargs):
         """初始化图像编辑客户端"""
         super().__init__(*args, **kwargs)
-        # 缓存每个端点的服务类型：endpoint -> model_type ("bagel" 或 "qwen")
+        # 缓存每个端点的服务类型：endpoint -> model_type ("bagel" 或 "qwen_image_edit")
         self._model_types: Dict[str, str] = {}
 
     def _detect_model_type(self, endpoint: str) -> str:
         """
-        检测端点的服务类型（BAGEL 或 Qwen）
+        检测端点的服务类型（BAGEL 或 Qwen-Image-Edit）
         
         Args:
             endpoint: 服务端点URL
             
         Returns:
-            "bagel" 或 "qwen"
+            "bagel" 或 "qwen_image_edit"
         """
         # 如果已缓存，直接返回
         if endpoint in self._model_types:
@@ -630,7 +630,7 @@ class ImageEditClient(ServiceClient):
                 data = response.json()
                 model_type = data.get("model_type", "").lower()
                 if "qwen" in model_type:
-                    detected_type = "qwen"
+                    detected_type = "qwen_image_edit"
                 else:
                     detected_type = "bagel"  # 默认为bagel
             else:
@@ -699,7 +699,7 @@ class ImageEditClient(ServiceClient):
             negative_prompt: Qwen的negative_prompt（None表示使用服务端默认值）
             use_scm: Qwen的SCM加速（None表示使用服务端默认值）
             scm_policy: Qwen的SCM策略（None表示使用服务端默认值）
-            model_type: 显式指定服务类型（"bagel" 或 "qwen"），如果为None则自动检测
+            model_type: 显式指定服务类型（"bagel" 或 "qwen_image_edit"），如果为None则自动检测
 
         Returns:
             编辑后的图像
@@ -725,9 +725,11 @@ class ImageEditClient(ServiceClient):
                     detected_type = "bagel"  # 默认
         else:
             detected_type = model_type.lower()
+            if detected_type == "qwen":
+                detected_type = "qwen_image_edit"
 
         # 根据服务类型构建不同的请求参数
-        if detected_type == "qwen":
+        if detected_type == "qwen_image_edit":
             # Qwen服务参数
             json_data = {
                 "image": image_b64,
@@ -1073,7 +1075,7 @@ def create_clients_from_env(check_config_file: bool = True) -> tuple[
                 health_status = "启用" if enable_health_check else "禁用"
                 print(f"✅ Image Edit Client created, endpoints: {len(endpoints)}, health check: {health_status}")
 
-    # 奖励计算客户端（CLIP/OmniVerifier）
+    # 奖励计算客户端（CLIP/self_reward）
     reward_endpoints = os.environ.get("REWARD_SERVER_ENDPOINTS", "")
     if reward_endpoints:
         endpoints = [e.strip() for e in reward_endpoints.split(",") if e.strip()]
