@@ -213,7 +213,8 @@ wandb/
 tmp/
 logs/
 distributed_services/logs/
-distributed_services/config/*_server_endpoints.local.txt
+distributed_services/config/*_endpoints.txt
+!distributed_services/config/*_endpoints.example.txt
 examples/data/*.json
 examples/data/*.jsonl
 examples/data/images/*

@@ -16,7 +16,7 @@ export REWARD_TYPE="self_reward"
 export REWARD_TYPE_PER_GPU=""
 ```
 
-`deploy_services.sh get_config` can build `service_endpoints.env` from endpoint text files under `distributed_services/config/`.
+`deploy_services.sh get_config` can build `service_endpoints.env` from endpoint text files under `distributed_services/config/`. The `*_endpoints.txt` files are generated local artifacts and are intentionally ignored by git, so cluster IPs and ports do not get committed.
 
 ## Image-Edit Services
 
