@@ -243,8 +243,11 @@ class RLHFDataset(Dataset):
 
     def __getitem__(self, index):
         example: dict = self.dataset[index]
+        raw_prompt = example.get(self.prompt_key)
         messages = self._build_messages(example)
         example.pop(self.prompt_key, None)
+        if raw_prompt is not None:
+            example["prompt"] = raw_prompt
 
         if self.task_key in example:
             task_info = example.pop(self.task_key)

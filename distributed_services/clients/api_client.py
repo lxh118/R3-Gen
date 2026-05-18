@@ -809,6 +809,7 @@ class RewardClient(ServiceClient):
         image: Image.Image,
         prompt: str,
         reward_type: str = "clip",
+        generated_qa: Optional[Dict[str, Any]] = None,
         # SAM3 专用参数
         category: Optional[str] = None,
         ground_truth: Optional[str] = None,
@@ -823,6 +824,7 @@ class RewardClient(ServiceClient):
             image: 图像
             prompt: 文本提示
             reward_type: 奖励类型 ("clip", "sam3")
+            generated_qa: 可选的分解问题，格式为 {"yn_question_list": [...]}
             category: SAM3 专用 - 图像类别
             ground_truth: SAM3 专用 - 地面真值
             bpe_path: SAM3 专用 - BPE路径
@@ -843,6 +845,8 @@ class RewardClient(ServiceClient):
             "prompt": prompt,
             "reward_type": reward_type,
         }
+        if generated_qa is not None:
+            json_data["generated_qa"] = generated_qa
 
         # SAM3 专用参数
         if reward_type.lower() == "sam3":

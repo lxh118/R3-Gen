@@ -6,7 +6,7 @@ import sys
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from functools import partial
-from typing import Callable, Optional, Tuple, TypedDict
+from typing import Any, Callable, Optional, Tuple, TypedDict
 
 import torch
 from transformers import PreTrainedTokenizer
@@ -15,10 +15,13 @@ from ...protocol import DataProto
 from .config import RewardConfig
 
 
-class RewardInput(TypedDict):
+class RewardInput(TypedDict, total=False):
     response: str
     response_length: int
     ground_truth: str
+    prompt: str
+    images: list[Any]
+    videos: list[Any]
 
 
 class RewardScore(TypedDict):
@@ -64,6 +67,27 @@ class FunctionRewardManager(ABC):
         """Compute reward for a batch of data."""
         ...
 
+    def _build_reward_input(self, data: DataProto, index: int, response: str, response_length: int) -> RewardInput:
+        reward_input: RewardInput = {
+            "response": response,
+            "response_length": response_length,
+            "ground_truth": data.non_tensor_batch["ground_truth"][index],
+        }
+
+        if "prompt" in data.non_tensor_batch:
+            reward_input["prompt"] = data.non_tensor_batch["prompt"][index]
+
+        multi_modal_batch = data.non_tensor_batch.get("multi_modal_data")
+        if multi_modal_batch is not None:
+            multi_modal_data = multi_modal_batch[index]
+            if isinstance(multi_modal_data, dict):
+                if "images" in multi_modal_data:
+                    reward_input["images"] = multi_modal_data["images"]
+                if "videos" in multi_modal_data:
+                    reward_input["videos"] = multi_modal_data["videos"]
+
+        return reward_input
+
 
 class SequentialFunctionRewardManager(FunctionRewardManager):
     reward_fn: SequentialRewardFunction
@@ -80,11 +104,7 @@ class SequentialFunctionRewardManager(FunctionRewardManager):
                 valid_response_ids, skip_special_tokens=self.config.skip_special_tokens
             )
             score = self.reward_fn(
-                {
-                    "response": response_str,
-                    "response_length": cur_response_length,
-                    "ground_truth": data.non_tensor_batch["ground_truth"][i],
-                }
+                self._build_reward_input(data, i, response_str, cur_response_length)
             )
             reward_tensor[i, cur_response_length - 1] = score["overall"]
             for key, value in score.items():
@@ -107,11 +127,7 @@ class BatchFunctionRewardManager(FunctionRewardManager):
                 valid_response_ids, skip_special_tokens=self.config.skip_special_tokens
             )
             reward_inputs.append(
-                {
-                    "response": response_str,
-                    "response_length": cur_response_length,
-                    "ground_truth": data.non_tensor_batch["ground_truth"][i],
-                }
+                self._build_reward_input(data, i, response_str, cur_response_length)
             )
 
         scores = self.reward_fn(reward_inputs)

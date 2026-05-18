@@ -829,6 +829,15 @@ def compute_stage2_reward_api(
         
         # 确保图片格式为RGB（与CLIP/SAM3/OmniVerifier服务器端处理一致）
         edited_image = edited_image.convert("RGB")
+
+        generated_qa = None
+        if ground_truth:
+            try:
+                gt_data_for_reward = json.loads(ground_truth)
+                if isinstance(gt_data_for_reward, dict):
+                    generated_qa = gt_data_for_reward.get("generated_qa")
+            except (json.JSONDecodeError, TypeError, AttributeError):
+                generated_qa = None
         
         # 3. 调用奖励计算服务（按 reward_type 选择客户端）
         score = 0.0
@@ -939,6 +948,7 @@ def compute_stage2_reward_api(
                         image=edited_image,
                         prompt=original_prompt,
                         reward_type=base_reward_type,
+                        generated_qa=generated_qa,
                     )
                     return result
                 except RuntimeError as e:
@@ -1028,6 +1038,7 @@ def compute_stage2_reward_api(
                 image=edited_image,
                 prompt=original_prompt,
                 reward_type=reward_type,
+                generated_qa=generated_qa,
             )
             score = reward_result["raw_score"]
         
