@@ -45,7 +45,10 @@ For the demo set:
 export TRAIN_DATA_PATH=examples/data/demo_train.json
 export VAL_DATA_PATH=examples/data/demo_train.json
 export IMAGE_DIR=examples/data/images
+export ROLLOUT_BATCH_SIZE=64
 ```
+
+`train_quick.sh` also uses `ROLLOUT_BATCH_SIZE=64` automatically when the bundled demo data is used and `ROLLOUT_BATCH_SIZE` is not set.
 
 ## Start Services
 

@@ -31,7 +31,13 @@ else
     reward_kwargs="{\"think_format_weight\":0.1,\"json_format_weight\":0.05,\"stage1_weight\":0.2,\"stage2_weight\":0.8,\"image_dir\":\"${image_dir}\",\"default_reward_type\":\"self_reward\",\"enable_stage2\":true}"
 fi
 
-rollout_batch_size="${ROLLOUT_BATCH_SIZE:-128}"
+if [[ -n "${ROLLOUT_BATCH_SIZE:-}" ]]; then
+    rollout_batch_size="${ROLLOUT_BATCH_SIZE}"
+elif [[ "${train_data_path}" == "examples/data/demo_train.json" ]]; then
+    rollout_batch_size=64
+else
+    rollout_batch_size=128
+fi
 n_gpus_per_node="${N_GPUS_PER_NODE:-8}"
 trainer_nnodes="${NNODES:-1}"
 max_prompt_length="${MAX_PROMPT_LENGTH:-4096}"

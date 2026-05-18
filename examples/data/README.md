@@ -26,7 +26,10 @@ The JSON uses image paths relative to `examples/data/images`:
 export TRAIN_DATA_PATH=examples/data/demo_train.json
 export VAL_DATA_PATH=examples/data/demo_train.json
 export IMAGE_DIR=examples/data/images
+export ROLLOUT_BATCH_SIZE=64
 ```
+
+The demo split has fewer than 128 records, so use a rollout batch size such as 64 unless you replace it with a larger training set.
 
 The image files are kept out of git. The demo image archive is released at [nickname-xingxing/R3-Gen_demoTrain](https://huggingface.co/datasets/nickname-xingxing/R3-Gen_demoTrain). Download and unpack it so the directory layout is:
 
