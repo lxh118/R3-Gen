@@ -1,6 +1,5 @@
 """
 API客户端 - 用于调用图像编辑和奖励计算服务
-支持负载均衡和故障转移
 
 放置在: reward-server/distributed_services/clients/api_client.py
 """
@@ -20,7 +19,6 @@ from PIL import Image
 
 def _get_env_int(key: str, default: int) -> int:
     """
-    安全地从环境变量获取整数值，自动去除引号
 
     Args:
     key: 环境变量键
@@ -30,7 +28,6 @@ def _get_env_int(key: str, default: int) -> int:
     整数值
     """
     value = os.environ.get(key, str(default))
-    # 去除可能的引号（配置文件解析可能遗留）
     value = value.strip().strip('"').strip("'")
     try:
         return int(value)
@@ -40,7 +37,6 @@ def _get_env_int(key: str, default: int) -> int:
 
 def _get_env_bool(key: str, default: bool = True) -> bool:
     """
-    安全地从环境变量获取布尔值，自动去除引号
 
     Args:
     key: 环境变量键
@@ -50,7 +46,6 @@ def _get_env_bool(key: str, default: bool = True) -> bool:
     布尔值
     """
     value = os.environ.get(key, str(default).lower())
-    # 去除可能的引号
     value = value.strip().strip('"').strip("'").lower()
     return value == "true"
 
@@ -164,7 +159,7 @@ class ServiceClient:
 
         current_time = time.time()
 
-        # 优化：被动健康检查为主，主动检查为辅
+        # 被动健康检查为主，主动检查为辅
         # 只在以下情况才进行主动全量检查：
         # 1. 强制检查（所有端点都不健康时）
         # 2. 长时间没有请求时（600秒，远大于业务请求间隔）
@@ -177,17 +172,17 @@ class ServiceClient:
         )
 
         if should_full_check:
-            # 优化：添加随机延迟，避免多个客户端同时进行健康检查
-            # 原因：VERL可能有多个worker进程，每个都有自己的客户端实例
+            # 添加随机延迟，避免多个客户端同时进行健康检查
+            # VERL可能有多个worker进程，每个都有自己的客户端实例
             # 如果所有客户端同时检查，会导致某个端点收到大量并发请求
-            # 注意：延迟范围进一步减少（0-1秒），降低开销
+            # 延迟范围进一步减少（0-1秒），降低开销
             if not force_check:
                 # 随机延迟0-1秒，分散健康检查请求（进一步减少延迟时间）
                 random_delay = random.uniform(0, 1)
                 time.sleep(random_delay)
 
-            # 优化：并发健康检查，而不是串行检查
-            # 原因：串行检查32个端点需要32×0.1秒=3.2秒，并发检查可以大大减少时间
+            # 并发健康检查，而不是串行检查
+            # 串行检查32个端点需要32×0.1秒=3.2秒，并发检查可以大大减少时间
             # 使用线程池并发检查所有端点，最多16个并发（避免对服务端造成过大压力）
             healthy_endpoints = []
             unhealthy_endpoints = []
@@ -220,12 +215,10 @@ class ServiceClient:
 
             self._last_full_health_check = current_time
 
-            # 优化日志输出：只在健康状态发生显著变化时打印
-            # 减少日志频率，避免频繁的状态变化产生大量日志
             current_summary = (len(healthy_endpoints), len(unhealthy_endpoints))
 
             if healthy_endpoints:
-                # 优化日志输出策略：
+                # 日志输出策略：
                 # 1. 首次检查且全部健康：不打印（避免初始化时的噪音）
                 # 2. 首次检查且有部分不健康：打印（重要信息）
                 # 3. 状态变化（从不健康变为健康，或健康数量显著变化）：打印
@@ -307,8 +300,6 @@ class ServiceClient:
             # 健康恢复信息已在健康检查结果中显示，这里不再重复打印
         else:
             consecutive_failures = failures + 1
-            # 优化：限制失败计数上限，避免无限累积（最大1000次）
-            # 原因：失败计数过高（如2197次）会导致端点被永久跳过，即使服务已恢复
             max_failure_count = 1000
             if consecutive_failures > max_failure_count:
                 consecutive_failures = max_failure_count
@@ -316,8 +307,8 @@ class ServiceClient:
             if consecutive_failures == max_failure_count:
                 print(f"[INFO] 端点失败计数达到上限 ({max_failure_count})，将定期检查恢复: {endpoint}")
 
-            # 优化：允许偶尔失败（连续失败阈值可配置，默认5次）
-            # 原因：服务在处理请求时可能暂时无法响应健康检查，网络抖动也可能导致误判
+            # 允许偶尔失败（连续失败阈值可配置，默认5次）
+            # 服务在处理请求时可能暂时无法响应健康检查，网络抖动也可能导致误判
             # 在分布式环境中，节点不会真正断线，只是通信问题导致暂时无法响应
             # 提高阈值可以减少误判，避免频繁标记为不健康
             health_check_failure_threshold = _get_env_int("API_HEALTH_CHECK_FAILURE_THRESHOLD", 5)
@@ -348,7 +339,7 @@ class ServiceClient:
             # 没有健康端点，返回所有端点（让重试机制处理）
             healthy_endpoints = self.endpoints
 
-        # 优化：直接从健康端点列表中轮询，确保负载均衡
+        # 直接从健康端点列表中轮询，确保负载均衡
         # 使用健康端点列表的索引，而不是原始端点列表的索引
         if healthy_endpoints:
             # 线程安全地更新 round-robin 指针，避免并发线程拿到相同 index 导致热点
@@ -388,7 +379,7 @@ class ServiceClient:
             # 如果已经尝试过所有端点，进行全量健康检查
             if len(tried_endpoints) >= len(self.endpoints):
                 tried_endpoints.clear()  # 重置，开始新的一轮
-                # 优化：避免频繁输出日志，只在间隔时间后打印
+                # 避免频繁输出日志，只在间隔时间后打印
                 current_time = time.time()
                 if current_time - self._last_full_check_log_time >= self._full_check_log_interval:
                     print(f"[INFO] 已尝试所有端点，进行全量健康检查...", flush=True)
@@ -414,7 +405,7 @@ class ServiceClient:
                 health_check_failure_threshold = _get_env_int("API_HEALTH_CHECK_FAILURE_THRESHOLD", 5)
 
                 # 如果端点不健康，直接跳过（不等待超时）
-                # 注意：只有当连续失败次数 >= 阈值时，才认为端点不健康
+                # 只有当连续失败次数 >= 阈值时，才认为端点不健康
                 if not is_healthy and consecutive_failures >= health_check_failure_threshold:
                     # 如果连续失败次数较少（<阈值+3），快速检查一次看是否恢复
                     if consecutive_failures < health_check_failure_threshold + 3:
@@ -429,7 +420,7 @@ class ServiceClient:
                             continue
                     else:
                         # 连续失败次数过多，需要定期检查恢复
-                        # 优化：根据失败次数动态调整检查频率
+                        # 根据失败次数动态调整检查频率
                         # - 失败次数 < 100: 每5次检查一次
                         # - 失败次数 < 500: 每20次检查一次
                         # - 失败次数 >= 500: 每50次检查一次（避免过度检查）
@@ -454,7 +445,7 @@ class ServiceClient:
 
                         should_log = False
 
-                        # 优化日志输出：当失败次数 > 50 时，每50次失败才打印一次日志
+                        # 当失败次数 > 50 时，每50次失败才打印一次日志
                         if consecutive_failures > 50:
                             log_interval = self._unhealthy_log_interval
                             log_count = self._unhealthy_endpoint_log_count.get(endpoint, 0)
@@ -982,7 +973,7 @@ def _reload_config_file(config_file: str) -> bool:
 def _check_and_reload_config(
     edit_client: Optional[ImageEditClient],
     reward_client: Optional[RewardClient],
-    sam3_client: Optional[RewardClient]  # ✅ 添加 SAM3 客户端参数
+    sam3_client: Optional[RewardClient]  # 添加 SAM3 客户端参数
 ) -> bool:
     """
     检查配置文件是否修改，如果修改则重新加载并更新客户端
